@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NMT Transformer — Complete Guide (AR↔EN)</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&family=Sora:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0e0f14;--bg2:#151720;--bg3:#1c1e2a;--bg4:#222537;
+  --border:#2e3147;--border2:#3a3e5c;
+  --text:#e2e4f0;--text2:#9499b8;--text3:#5a5f7a;
+  --purple:#8b7ff5;--purple2:#6c5fc7;--purple3:#3d3878;--purple4:#1e1c3a;
+  --teal:#4ecdc4;--teal2:#2ba89f;--teal4:#122d2c;
+  --coral:#ff6b6b;--coral2:#cc4444;--coral4:#2d1515;
+  --amber:#ffa94d;--amber2:#cc7a1a;--amber4:#2d1e06;
+  --green:#69db7c;--green2:#40a854;--green4:#0d2214;
+  --blue:#74c0fc;--blue2:#3d8bc4;--blue4:#0d1e2d;
+  --pink:#f48fb1;
+  --r:10px;--r2:6px;
+  font-size:15px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-weight:400;line-height:1.7;min-height:100vh}
+a{color:var(--purple);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* LAYOUT */
+.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:0 0 2rem}
+.main{margin-left:240px;max-width:900px;padding:3rem 2.5rem 6rem}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:1.5rem}}
+
+/* SIDEBAR */
+.sidebar-logo{padding:1.25rem 1.25rem .75rem;border-bottom:1px solid var(--border)}
+.sidebar-logo h2{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:var(--purple);letter-spacing:.08em;text-transform:uppercase}
+.sidebar-logo p{font-size:11px;color:var(--text3);margin-top:2px}
+.nav-section{padding:.75rem 0 0}
+.nav-section-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;padding:0 1.25rem .4rem}
+.nav-item{display:flex;align-items:center;gap:8px;padding:.35rem 1.25rem;font-size:12.5px;color:var(--text2);cursor:pointer;transition:all .15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--bg3);border-left-color:var(--border2)}
+.nav-item.active{color:var(--purple);background:var(--purple4);border-left-color:var(--purple)}
+.nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* TYPOGRAPHY */
+h1{font-family:'Sora',sans-serif;font-size:2rem;font-weight:700;color:var(--text);line-height:1.25;margin-bottom:.5rem}
+h2{font-family:'Sora',sans-serif;font-size:1.35rem;font-weight:600;color:var(--text);margin:2.5rem 0 .75rem;padding-top:2.5rem;border-top:1px solid var(--border)}
+h2:first-of-type{border-top:none;padding-top:0;margin-top:1rem}
+h3{font-size:1rem;font-weight:600;color:var(--text);margin:1.25rem 0 .5rem}
+p{color:var(--text2);margin-bottom:.75rem;line-height:1.8}
+ul,ol{color:var(--text2);padding-left:1.4rem;margin-bottom:.75rem}
+li{margin-bottom:.3rem;line-height:1.7}
+strong{color:var(--text);font-weight:500}
+code{font-family:'JetBrains Mono',monospace;font-size:.82em;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--teal)}
+pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;overflow-x:auto;margin:.75rem 0 1rem}
+pre code{background:none;border:none;padding:0;color:var(--text2);font-size:.83rem;line-height:1.65}
+.kw{color:var(--purple)}
+.fn{color:var(--teal)}
+.st{color:var(--amber)}
+.co{color:var(--text3)}
+.nu{color:var(--coral)}
+.cm{color:var(--green)}
+
+/* CHIPS / BADGES */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500;font-family:'JetBrains Mono',monospace;letter-spacing:.02em;white-space:nowrap}
+.chip.fix{background:rgba(255,107,107,.15);color:var(--coral);border:1px solid rgba(255,107,107,.3)}
+.chip.new{background:rgba(78,205,196,.15);color:var(--teal);border:1px solid rgba(78,205,196,.3)}
+.chip.info{background:rgba(139,127,245,.15);color:var(--purple);border:1px solid rgba(139,127,245,.3)}
+.chip.warn{background:rgba(255,169,77,.15);color:var(--amber);border:1px solid rgba(255,169,77,.3)}
+.chip.ok{background:rgba(105,219,124,.15);color:var(--green);border:1px solid rgba(105,219,124,.3)}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem 1.5rem;margin-bottom:1rem}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1.25rem}
+.metric-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:1rem;text-align:center}
+.metric-val{font-family:'JetBrains Mono',monospace;font-size:1.6rem;font-weight:500;margin:.2rem 0 .15rem}
+.metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.metric-sub{font-size:11.5px;color:var(--text3);margin-top:2px}
+
+/* FORMULA BOX */
+.formula{background:var(--bg3);border:1px solid var(--border2);border-left:3px solid var(--purple);border-radius:0 var(--r) var(--r) 0;padding:1rem 1.25rem;margin:.75rem 0;font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--text);line-height:1.8}
+.formula .label{font-family:'Inter',sans-serif;font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem}
+
+/* ALERT */
+.alert{border-radius:var(--r2);padding:.875rem 1.125rem;margin:.75rem 0;font-size:13.5px;line-height:1.7}
+.alert.danger{background:var(--coral4);border:1px solid rgba(255,107,107,.25);color:var(--text)}
+.alert.success{background:var(--green4);border:1px solid rgba(105,219,124,.2);color:var(--text)}
+.alert.warn{background:var(--amber4);border:1px solid rgba(255,169,77,.2);color:var(--text)}
+.alert.info{background:var(--purple4);border:1px solid rgba(139,127,245,.2);color:var(--text)}
+.alert-title{font-weight:600;font-size:13px;margin-bottom:.3rem;display:flex;align-items:center;gap:6px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:.75rem 0 1rem;font-size:13px}
+th{text-align:left;padding:.6rem .875rem;background:var(--bg3);color:var(--text2);font-weight:500;font-size:11.5px;letter-spacing:.04em;border:1px solid var(--border)}
+td{padding:.6rem .875rem;border:1px solid var(--border);color:var(--text2);vertical-align:top;line-height:1.6}
+tr:hover td{background:var(--bg3)}
+.td-code{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--teal)}
+.td-ok{color:var(--green)}
+.td-warn{color:var(--amber)}
+.td-bad{color:var(--coral)}
+
+/* ARCH */
+.arch-grid{display:grid;grid-template-columns:1fr 60px 1fr;gap:0;margin:1.25rem 0}
+.arch-stack{display:flex;flex-direction:column;gap:6px}
+.arch-box{border-radius:var(--r2);padding:.6rem 1rem;text-align:center;font-size:12.5px;font-weight:500;border:1px solid}
+.arch-box.emb{background:var(--bg3);border-color:var(--border2);color:var(--text2)}
+.arch-box.sa{background:rgba(255,169,77,.1);border-color:rgba(255,169,77,.35);color:var(--amber)}
+.arch-box.ffn{background:rgba(139,127,245,.1);border-color:rgba(139,127,245,.35);color:var(--purple)}
+.arch-box.mem{background:rgba(78,205,196,.12);border-color:rgba(78,205,196,.4);color:var(--teal);font-size:11.5px}
+.arch-box.msa{background:rgba(255,169,77,.1);border-color:rgba(255,169,77,.35);color:var(--amber)}
+.arch-box.cross{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.35);color:var(--coral);font-weight:600}
+.arch-box.out{background:rgba(105,219,124,.1);border-color:rgba(105,219,124,.3);color:var(--green)}
+.arch-sub{font-size:10px;font-weight:400;opacity:.75;margin-top:2px}
+.arch-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:18px}
+.bridge{display:flex;align-items:center;justify-content:center;color:var(--teal);font-size:11px;font-weight:500;border-top:1px dashed rgba(78,205,196,.4);border-bottom:1px dashed rgba(78,205,196,.4);margin:4px 0;padding:4px 0;text-align:center;line-height:1.4}
+
+/* CELL EXPLORER */
+.cell-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1rem}
+.cell-tab{padding:.35rem .875rem;border-radius:999px;font-size:12px;border:1px solid var(--border);color:var(--text3);cursor:pointer;transition:all .15s}
+.cell-tab:hover{border-color:var(--border2);color:var(--text2)}
+.cell-tab.active{background:var(--purple4);border-color:var(--purple);color:var(--purple)}
+.cell-card{display:none;animation:fade .2s ease}
+.cell-card.visible{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* PARAM TABLE DIFF */
+.diff-old{color:var(--coral);text-decoration:line-through;opacity:.7;font-family:'JetBrains Mono',monospace;font-size:.8rem}
+.diff-new{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:500}
+
+/* GLOSSARY */
+.glossary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.75rem;margin-bottom:1rem}
+.gterm{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;cursor:pointer;transition:border-color .15s}
+.gterm:hover{border-color:var(--border2)}
+.gterm-title{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--purple);margin-bottom:.35rem}
+.gterm-def{font-size:12.5px;color:var(--text2);line-height:1.65}
+.gterm-formula{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:var(--bg3);border-radius:4px;padding:.5rem .75rem;margin-top:.5rem;color:var(--teal);line-height:1.6}
+
+/* HERO */
+.hero{padding:2rem 0 1.5rem;border-bottom:1px solid var(--border);margin-bottom:.5rem}
+.hero-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:.75rem}
+.hero-tag{font-size:11px;padding:3px 10px;border-radius:999px;background:var(--bg3);border:1px solid var(--border);color:var(--text3)}
+
+/* PROGRESS BAR */
+.progress-wrap{background:var(--bg3);border-radius:999px;height:8px;overflow:hidden;margin:.4rem 0}
+.progress-bar{height:100%;border-radius:999px;transition:width .4s ease}
+
+/* SECTION ANCHOR */
+.section{scroll-margin-top:1.5rem}
+
+/* SEARCH */
+.search-wrap{padding:1rem 1.25rem .5rem;position:sticky;top:0;background:var(--bg2);border-bottom:1px solid var(--border);z-index:10}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:.45rem .75rem;font-size:12.5px;color:var(--text);font-family:'Inter',sans-serif;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--purple)}
+.search-input::placeholder{color:var(--text3)}
+
+/* VERDICT */
+.verdict{display:grid;grid-template-columns:auto 1fr;gap:.875rem;align-items:start;padding:1rem 1.25rem;border-radius:var(--r);margin:.6rem 0;border:1px solid}
+.verdict.good{background:var(--green4);border-color:rgba(105,219,124,.2)}
+.verdict.bad{background:var(--coral4);border-color:rgba(255,107,107,.25)}
+.verdict.tip{background:var(--purple4);border-color:rgba(139,127,245,.2)}
+.verdict-icon{font-size:18px;line-height:1;padding-top:1px}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ═══════════════════════════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h2>NMT Transformer</h2>
+    <p>AR ↔ EN · Complete Guide</p>
+  </div>
+
+  <div class="search-wrap">
+    <input class="search-input" placeholder="Search sections…" oninput="filterNav(this.value)" id="nav-search"/>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Overview</div>
+    <div class="nav-item active" onclick="scrollTo('intro')" data-label="intro">
+      <span class="nav-dot" style="background:#8b7ff5"></span>Project Overview
+    </div>
+    <div class="nav-item" onclick="scrollTo('pipeline')" data-label="pipeline">
+      <span class="nav-dot" style="background:#4ecdc4"></span>Translation Pipeline
+    </div>
+    <div class="nav-item" onclick="scrollTo('arch')" data-label="arch">
+      <span class="nav-dot" style="background:#ffa94d"></span>Architecture
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Notebook Cells</div>
+    <div class="nav-item" onclick="scrollTo('cells')" data-label="cells">
+      <span class="nav-dot" style="background:#69db7c"></span>All 16 Cells
+    </div>
+    <div class="nav-item" onclick="scrollTo('fixes')" data-label="fixes">
+      <span class="nav-dot" style="background:#ff6b6b"></span>OOM Fixes (7 total)
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Metrics & Terms</div>
+    <div class="nav-item" onclick="scrollTo('bleu')" data-label="bleu">
+      <span class="nav-dot" style="background:#74c0fc"></span>BLEU Score
+    </div>
+    <div class="nav-item" onclick="scrollTo('ppl')" data-label="ppl">
+      <span class="nav-dot" style="background:#f48fb1"></span>Perplexity (PPL)
+    </div>
+    <div class="nav-item" onclick="scrollTo('loss')" data-label="loss">
+      <span class="nav-dot" style="background:#ffa94d"></span>Loss Functions
+    </div>
+    <div class="nav-item" onclick="scrollTo('glossary')" data-label="glossary">
+      <span class="nav-dot" style="background:#8b7ff5"></span>Full Glossary (40+)
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Hyperparameters</div>
+    <div class="nav-item" onclick="scrollTo('hparams')" data-label="hparams">
+      <span class="nav-dot" style="background:#4ecdc4"></span>Every Parameter Explained
+    </div>
+    <div class="nav-item" onclick="scrollTo('memory')" data-label="memory">
+      <span class="nav-dot" style="background:#ff6b6b"></span>GPU Memory Budget
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Results</div>
+    <div class="nav-item" onclick="scrollTo('results')" data-label="results">
+      <span class="nav-dot" style="background:#69db7c"></span>Training Results
+    </div>
+    <div class="nav-item" onclick="scrollTo('curves')" data-label="curves">
+      <span class="nav-dot" style="background:#74c0fc"></span>Curves &amp; History
+    </div>
+  </div>
+</nav>
+
+<!-- ══ MAIN ═══════════════════════════════════════════════════════════ -->
+<main class="main">
+
+<!-- ─── HERO ──────────────────────────────────────────────────────── -->
+<section class="hero section" id="intro">
+  <div style="margin-bottom:.5rem">
+    <span class="chip fix">OOM Fixed</span>
+    <span class="chip new">v2 · D=512 · 6 layers</span>
+    <span class="chip ok">Kaggle T4 · 56.4 M params</span>
+  </div>
+  <h1>Neural Machine Translation<br><span style="color:var(--purple)">English → Arabic</span></h1>
+  <p style="font-size:1rem;margin-top:.5rem">A deep-dive into <code>nmt-transformerv2.ipynb</code> — every architectural choice, every cell, every hyperparameter, the seven OOM fixes that made it fit on a T4, and the actual training results: <strong>val acc 46.2%</strong>, <strong>greedy BLEU-4 12.68</strong>, <strong>beam-5 BLEU-4 12.70</strong>, early-stopped at epoch 21.</p>
+  <div class="hero-tags">
+    <span class="hero-tag">Transformer Encoder-Decoder</span>
+    <span class="hero-tag">OPUS-100 · 300 K pairs</span>
+    <span class="hero-tag">SentencePiece BPE 8 K / 16 K</span>
+    <span class="hero-tag">Label-Smoothing CE</span>
+    <span class="hero-tag">Noam LR · warmup 8 K</span>
+    <span class="hero-tag">Beam Search α=0.6</span>
+    <span class="hero-tag">fp16 AMP</span>
+  </div>
+</section>
+
+<!-- ─── PIPELINE ───────────────────────────────────────────────────── -->
+<h2 class="section" id="pipeline">End-to-end translation pipeline</h2>
+<p>Every single translation call — whether during training or at inference time — passes through these exact six stages in order.</p>
+
+<div class="card" style="overflow-x:auto">
+<table>
+<thead><tr><th>#</th><th>Stage</th><th>Input → Output</th><th>Cell</th><th>Key detail</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><strong>Raw text</strong></td><td>English string</td><td>—</td><td>Unicode normalised, lowercased, regex-cleaned in Cell 5</td></tr>
+<tr><td>2</td><td><strong>BPE tokenise</strong></td><td>String → integer IDs</td><td>6</td><td>SentencePiece BPE, 8K EN vocab. "postponed" → [892, 301]</td></tr>
+<tr><td>3</td><td><strong>Encoder × 6</strong></td><td>IDs → 512-dim vectors</td><td>8</td><td>Self-attention + FFN, pre-norm. Produces K, V memory</td></tr>
+<tr><td>4</td><td><strong>Decoder × 6</strong></td><td>Arabic so far + memory → next logits</td><td>8</td><td>Masked self-attn + cross-attn + FFN. Auto-regressive</td></tr>
+<tr><td>5</td><td><strong>BPE detokenise</strong></td><td>Integer IDs → Arabic string</td><td>6</td><td>16K AR vocab. sp_ar.decode([4821, 33]) → "الاجتماع"</td></tr>
+<tr><td>6</td><td><strong>Arabic output</strong></td><td>Final translated text</td><td>13/14</td><td>Greedy (fastest) or Beam-5 (best quality)</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ─── ARCHITECTURE ───────────────────────────────────────────────── -->
+<h2 class="section" id="arch">Transformer architecture</h2>
+<p>The "Attention Is All You Need" (Vaswani 2017) encoder-decoder. Your implementation uses <strong>Pre-Norm</strong> (LayerNorm before sublayer, not after), which is more stable for deep networks.</p>
+
+<div class="arch-grid">
+  <div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:.6rem;font-weight:500">ENCODER — 6 layers (reads English)</div>
+    <div class="arch-stack">
+      <div class="arch-box out">Memory output (K, V)<div class="arch-sub">shape: (B, T_src, 512)</div></div>
+      <div style="text-align:center;font-size:11px;color:var(--text3)">↑ ×6 layers</div>
+      <div class="arch-box ffn">Feed-Forward Network (GELU)<div class="arch-sub">512 → 2048 → 512 per-position</div></div>
+      <div style="text-align:center;font-size:10px;color:var(--text3)">add &amp; norm (residual)</div>
+      <div class="arch-box sa">Multi-Head Self-Attention<div class="arch-sub">8 heads × 64-dim, no causal mask</div></div>
+      <div style="text-align:center;font-size:10px;color:var(--text3)">add &amp; norm (residual)</div>
+      <div class="arch-box emb">Token Embedding + Positional Encoding<div class="arch-sub">Embedding(8K, 512) × √512 + sin/cos</div></div>
+      <div class="arch-box emb" style="background:var(--bg4);border-style:dashed">English token IDs: [45, 231, 17, 892]</div>
+    </div>
+  </div>
+
+  <div class="arch-arrow">
+    <div style="writing-mode:vertical-rl;text-align:center;font-size:10px;color:var(--teal);letter-spacing:.08em;padding:8px 0">K, V MEMORY →</div>
+    <div style="flex:1;border-left:1px dashed rgba(78,205,196,.4);margin:4px auto"></div>
+  </div>
+
+  <div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:.6rem;font-weight:500">DECODER — 6 layers (generates Arabic)</div>
+    <div class="arch-stack">
+      <div class="arch-box out">Linear(512→16K) + CE Loss<div class="arch-sub">weight-tied with AR embedding · FIX 4</div></div>
+      <div style="text-align:center;font-size:11px;color:var(--text3)">↑ ×6 layers</div>
+      <div class="arch-box ffn">Feed-Forward Network (GELU)<div class="arch-sub">512 → 2048 → 512</div></div>
+      <div style="text-align:center;font-size:10px;color:var(--text3)">add &amp; norm</div>
+      <div class="arch-box cross">Cross-Attention — translation bridge<div class="arch-sub">Q=decoder · K,V=encoder memory</div></div>
+      <div style="text-align:center;font-size:10px;color:var(--text3)">add &amp; norm</div>
+      <div class="arch-box msa">Masked Self-Attention<div class="arch-sub">causal mask — no future tokens</div></div>
+      <div style="text-align:center;font-size:10px;color:var(--text3)">add &amp; norm</div>
+      <div class="arch-box emb">Token Embedding + Positional Encoding<div class="arch-sub">Embedding(16K, 512) × √512 + sin/cos</div></div>
+      <div class="arch-box emb" style="background:var(--bg4);border-style:dashed">Arabic shifted-right: [SOS, الاجتماع, …]</div>
+    </div>
+  </div>
+</div>
+
+<h3>Why Pre-Norm instead of Post-Norm?</h3>
+<p>The original "Attention Is All You Need" paper used Post-Norm (LayerNorm <em>after</em> the sublayer). Pre-Norm (LayerNorm <em>before</em>) is now standard because it prevents gradient vanishing/exploding through deep stacks — you can train 6 layers stably without warmup tricks.</p>
+
+<h3>Weight tying explained</h3>
+<p>The final linear layer that maps 512-dim → 16,000 Arabic vocab logits <em>shares</em> its weight matrix with the Arabic embedding layer. This means the same matrix is used both to look up "what does token 4821 mean as input?" and "how likely is token 4821 as the next output?". This saves ~8 M parameters at D=512 and consistently improves BLEU by +0.3–0.5 points.</p>
+<pre><code><span class="kw">self</span>.<span class="fn">fc_out</span> = nn.Linear(d_model, tgt_vocab, bias=<span class="kw">False</span>)
+<span class="kw">self</span>.<span class="fn">fc_out</span>.weight = <span class="kw">self</span>.decoder.embedding.weight  <span class="co"># weight tying</span></code></pre>
+
+<!-- ─── ALL CELLS ───────────────────────────────────────────────────── -->
+<h2 class="section" id="cells">All 16 cells — deep dive</h2>
+<p>Click a cell tab to explore what it does, the key code, and what to watch for.</p>
+
+<div class="cell-tabs" id="cell-tabs"></div>
+<div id="cell-panels"></div>
+
+<!-- ─── OOM FIXES ──────────────────────────────────────────────────── -->
+<h2 class="section" id="fixes">The 7 OOM fixes</h2>
+
+<div class="alert danger">
+  <div class="alert-title">💥 Original error</div>
+  <code>OutOfMemoryError: CUDA out of memory. Tried to allocate 1.78 GiB. GPU 0 has a total capacity of 14.56 GiB. 3.17 GiB is reserved by PyTorch but unallocated.</code>
+  <p style="margin-top:.5rem;font-size:13px">The key clue: <strong>"3.17 GiB reserved but unallocated"</strong> — memory is there, but it's fragmented into pieces too small for a contiguous 1.78 GB allocation.</p>
+</div>
+
+<table>
+<thead><tr><th>Fix</th><th>What changed</th><th>Cell</th><th>Memory saved</th></tr></thead>
+<tbody>
+<tr><td><span class="chip fix">FIX 1</span></td><td><code>PYTORCH_ALLOC_CONF=expandable_segments:True</code> — eliminates allocator fragmentation</td><td>0</td><td class="td-ok">Clears 3.17 GB stuck fragmentation</td></tr>
+<tr><td><span class="chip fix">FIX 2</span></td><td><code>allow_tf32=True</code> — free 2× throughput on Ampere GPUs</td><td>2</td><td class="td-ok">Speed only, no memory</td></tr>
+<tr><td><span class="chip fix">FIX 3a</span></td><td><code>BATCH_SIZE</code> 128 → 64 — halves all (B,T,V) tensors</td><td>3</td><td class="td-ok">~490 MB saved</td></tr>
+<tr><td><span class="chip fix">FIX 3b</span></td><td><code>MAX_LEN</code> 60 → 50 — attention is O(T²), saves 31%</td><td>3</td><td class="td-ok">~130 MB saved</td></tr>
+<tr><td><span class="chip fix">FIX 4</span></td><td>Replace custom <code>LabelSmoothingLoss</code> with <code>nn.CrossEntropyLoss(label_smoothing=0.1)</code></td><td>10</td><td class="td-ok">~740 MB saved (primary fix)</td></tr>
+<tr><td><span class="chip fix">FIX 5</span></td><td><code>return_attn=False</code> during training + <code>empty_cache()</code> per epoch</td><td>11</td><td class="td-ok">~200 MB saved</td></tr>
+<tr><td><span class="chip fix">FIX 6</span></td><td>Save/restore <code>scheduler.step_n</code> in checkpoint — correct LR on resume</td><td>10</td><td>Correctness fix</td></tr>
+</tbody>
+</table>
+
+<h3>FIX 4 — Root cause deep dive</h3>
+<p>The original <code>LabelSmoothingLoss</code> computed this inside its forward pass:</p>
+<pre><code><span class="co"># ORIGINAL — allocates FOUR full (N, V) tensors</span>
+<span class="co"># N = B × T = 128 × 60 = 7680, V = 16000, fp16</span>
+<span class="co"># Each tensor = 7680 × 16000 × 2 bytes = 246 MB</span>
+
+log_prob = F.log_softmax(logits, dim=-<span class="nu">1</span>)   <span class="co"># 246 MB</span>
+dist = torch.full_like(log_prob, smooth/(V-<span class="nu">2</span>))  <span class="co"># 246 MB  ← THE KILLER</span>
+dist.scatter_(<span class="nu">1</span>, targets.unsqueeze(<span class="nu">1</span>), confidence)  <span class="co"># in-place</span>
+loss = -(dist * log_prob).<span class="fn">sum</span>(dim=-<span class="nu">1</span>)    <span class="co"># 246 MB product</span>
+<span class="co"># Total: ~984 MB for the loss step alone!</span>
+
+<span class="cm"># FIX — same math, zero extra tensors (fused CUDA kernel)</span>
+criterion = nn.CrossEntropyLoss(
+    ignore_index    = PAD_IDX,
+    label_smoothing = <span class="nu">0.1</span>
+)
+<span class="co"># Peak allocation: O(N), not O(N × V)</span></code></pre>
+
+<!-- ─── BLEU ────────────────────────────────────────────────────────── -->
+<h2 class="section" id="bleu">BLEU Score — explained from scratch</h2>
+
+<div class="verdict tip">
+  <div class="verdict-icon">📐</div>
+  <div><strong>One sentence summary:</strong> BLEU measures how many n-grams (word sequences) in your predicted translation also appear in the reference translation.</div>
+</div>
+
+<h3>Step-by-step calculation</h3>
+<p>Suppose the reference is <em>"the meeting was postponed"</em> and your model outputs <em>"the meeting got postponed"</em>.</p>
+
+<table>
+<thead><tr><th>n-gram order</th><th>Reference n-grams</th><th>Hypothesis n-grams</th><th>Matches</th><th>Precision</th></tr></thead>
+<tbody>
+<tr><td>1-gram (words)</td><td>the, meeting, was, postponed</td><td>the, meeting, got, postponed</td><td>3/4</td><td>0.75</td></tr>
+<tr><td>2-gram (pairs)</td><td>the meeting, meeting was, was postponed</td><td>the meeting, meeting got, got postponed</td><td>1/3</td><td>0.33</td></tr>
+<tr><td>3-gram</td><td>the meeting was, meeting was postponed</td><td>the meeting got, meeting got postponed</td><td>0/2</td><td>0.00</td></tr>
+<tr><td>4-gram</td><td>the meeting was postponed</td><td>the meeting got postponed</td><td>0/1</td><td>0.00</td></tr>
+</tbody>
+</table>
+
+<div class="formula">
+  <div class="label">BLEU-4 formula</div>
+  BLEU = BP × exp( (1/4) × Σ log(pₙ) )  where n = 1..4<br><br>
+  BP (Brevity Penalty) = min(1.0,  exp(1 - reference_length / hypothesis_length))<br>
+  pₙ = clipped_matches_of_order_n / hypothesis_ngrams_of_order_n<br><br>
+  Intuition: geometric mean of 1-gram, 2-gram, 3-gram, 4-gram precision.<br>
+  BP penalises translations that are too short (easy way to get high precision).
+</div>
+
+<h3>What do different BLEU scores mean for AR-EN?</h3>
+<div class="card-grid">
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--coral)">0–10</div>
+    <div class="metric-label">Almost useless</div>
+    <div class="metric-sub">Random words in right language</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--amber)">10–18</div>
+    <div class="metric-label">Partial meaning</div>
+    <div class="metric-sub">Subject + verb often correct</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--teal)">18–25</div>
+    <div class="metric-label">Understandable</div>
+    <div class="metric-sub">Most sentences gist-correct</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--green)">25–35</div>
+    <div class="metric-label">Good quality</div>
+    <div class="metric-sub">Near human for simple text</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--purple)">35+</div>
+    <div class="metric-label">Excellent</div>
+    <div class="metric-sub">State-of-art smaller models</div>
+  </div>
+</div>
+
+<div class="alert warn">
+  <div class="alert-title">⚠️ BLEU limitations for Arabic specifically</div>
+  Arabic is morphologically very rich — a single root like كتب can produce كتب، كتاب، مكتبة، كاتب، مكتوب. BLEU counts exact n-gram matches, so if your model generates a correct but differently-inflected form, it gets zero credit. Arabic BLEU scores are typically 3–5 points lower than English for the same quality of translation. Token accuracy (which you can see per-epoch) is a more reliable training signal.
+</div>
+
+<h3>Greedy vs Beam search BLEU</h3>
+<p>Your notebook computes both. Greedy decoding always picks the single highest-probability token at each step. Beam search (width=5) maintains 5 partial hypotheses and picks the globally best sequence — it's slower but consistently gives +2–4 BLEU points over greedy.</p>
+<pre><code><span class="co"># Greedy: fast, slightly lower BLEU</span>
+g_ids, attn_map = model.<span class="fn">translate_greedy</span>(src_tensor)
+
+<span class="co"># Beam-5: slower, best quality, length-penalty α=0.6</span>
+b_ids = model.<span class="fn">translate_beam</span>(src_tensor, beam_width=<span class="nu">5</span>, alpha=<span class="nu">0.6</span>)</code></pre>
+
+<!-- ─── PPL ─────────────────────────────────────────────────────────── -->
+<h2 class="section" id="ppl">Perplexity (PPL) — explained</h2>
+
+<div class="verdict tip">
+  <div class="verdict-icon">🎲</div>
+  <div><strong>One sentence summary:</strong> Perplexity is "how many equally likely choices does the model feel it has at each step?" Lower = more certain = better.</div>
+</div>
+
+<div class="formula">
+  <div class="label">Perplexity from cross-entropy loss</div>
+  PPL = exp(CE_loss)<br><br>
+  If CE loss = 4.0  →  PPL = e⁴ = 54.6   (model is confused between ~55 equally likely tokens)<br>
+  If CE loss = 3.0  →  PPL = e³ = 20.1   (model has narrowed to ~20 candidates)<br>
+  If CE loss = 2.3  →  PPL = e²·³ = 10.0  (very confident — 10 candidates)<br>
+  If CE loss = 1.0  →  PPL = e¹ = 2.7    (near-perfect — deciding between ~3 tokens)<br><br>
+  Target for good translation: PPL &lt; 20  (CE loss &lt; ~3.0)
+</div>
+
+<h3>Your training results</h3>
+<div class="card-grid">
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--coral)">2 457</div>
+    <div class="metric-label">PPL at epoch 1</div>
+    <div class="metric-sub">val CE = 7.81</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--amber)">89</div>
+    <div class="metric-label">PPL at epoch 10</div>
+    <div class="metric-sub">val CE = 4.49</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--teal)">56</div>
+    <div class="metric-label">PPL at epoch 21 (best)</div>
+    <div class="metric-sub">val CE = 4.03 · val acc 45.7 %</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--green)">~20</div>
+    <div class="metric-label">PPL target</div>
+    <div class="metric-sub">would need more data + epochs</div>
+  </div>
+</div>
+
+<div class="alert info">
+  <div class="alert-title">💡 What the PPL curve told you</div>
+  PPL fell sharply for the first ten epochs (warmup-driven), then flattened around 56–60 from epoch 18 onward. Train loss kept dropping (3.24 → 2.82) while val loss stagnated — the classic signature of a model that has consumed everything the 300 K-pair OPUS-100 sample can teach it at this capacity. Early stopping correctly fired at epoch 26 (best epoch 21).
+</div>
+
+<!-- ─── LOSS FUNCTIONS ──────────────────────────────────────────────── -->
+<h2 class="section" id="loss">Loss functions in this notebook</h2>
+
+<h3>Cross-Entropy Loss</h3>
+<p>The base loss. For each token position, it computes: <em>"the negative log-probability assigned to the correct Arabic token"</em>.</p>
+<div class="formula">
+  CE_loss(position t) = -log( softmax(logits)[correct_token_id] )<br><br>
+  If model assigns 90% prob to correct token → loss = -log(0.90) = 0.105  ✅ good<br>
+  If model assigns 10% prob to correct token → loss = -log(0.10) = 2.302  ❌ bad<br>
+  If model assigns 0.1% prob (early training) → loss = -log(0.001) = 6.9<br><br>
+  Final loss = mean over all non-PAD token positions in the batch
+</div>
+
+<h3>Label Smoothing (ε = 0.1)</h3>
+<p>Instead of the model targeting a hard 100% probability on the correct token, label smoothing distributes 10% of the probability mass evenly across all other tokens. This prevents overconfidence and improves generalisation (typically +0.3–0.5 BLEU).</p>
+<div class="formula">
+  Without smoothing: target = [0, 0, 0, 1.0, 0, ...] for correct token at index 3<br>
+  With smoothing ε=0.1: target = [ε/(V-1), ..., 1-ε, ..., ε/(V-1)]<br>
+                                = [0.0000063, ..., 0.9, ..., 0.0000063]<br><br>
+  Effective: model is penalised less for being wrong on rare tokens,<br>
+  but also gets less credit for being 100% confident on common ones.
+</div>
+
+<h3>Noam Learning Rate Schedule</h3>
+<p>Named after Noam Shazeer (Google Brain). Increases LR linearly for <code>warmup_steps</code> steps, then decays proportional to the inverse square root of step number.</p>
+<div class="formula">
+  lr(step) = d_model^(-0.5) × min(step^(-0.5), step × warmup^(-1.5))<br><br>
+  With D=256, warmup=4000:<br>
+  Peak LR at step 4000 = 256^(-0.5) × 4000^(-0.5) = 0.0625 × 0.0158 ≈ 0.00099<br><br>
+  Why warmup?  At step 1, gradients are random. A large LR would destroy the<br>
+  embedding initialisation. Warmup starts tiny, letting the model find a stable<br>
+  gradient direction before the LR climbs.
+</div>
+
+<!-- ─── GLOSSARY ────────────────────────────────────────────────────── -->
+<h2 class="section" id="glossary">Full glossary — every term in the notebook</h2>
+<p>Every abbreviation, metric, and concept you'll encounter.</p>
+
+<div class="glossary-grid" id="glossary-grid"></div>
+
+<!-- ─── HYPERPARAMETERS ────────────────────────────────────────────── -->
+<h2 class="section" id="hparams">Every hyperparameter explained</h2>
+<p>What each parameter does, how it affects training, and how to tune it.</p>
+
+<table>
+<thead><tr><th>Parameter</th><th>Current value</th><th>Effect on training</th><th>How to tune</th></tr></thead>
+<tbody id="hparam-table"></tbody>
+</table>
+
+<!-- ─── TRAINING RESULTS ───────────────────────────────────────────── -->
+<h2 class="section" id="results">Training results</h2>
+<p>Numbers reproduced verbatim from the saved cell outputs of <code>nmt-transformerv2 (1).ipynb</code>. The configuration used was D=512, 6 encoder + 6 decoder layers, 8 heads, D_FF=2048, dropout=0.1, batch 32 × accum 16 = effective batch 512, warmup 8 000 steps, 300 K training pairs, fp16 on a Kaggle Tesla T4 (15.6 GB).</p>
+
+<div class="card-grid">
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--purple)">56.4 M</div>
+    <div class="metric-label">Parameters</div>
+    <div class="metric-sub">22.99 M enc + 33.39 M dec</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--green)">21</div>
+    <div class="metric-label">Best epoch</div>
+    <div class="metric-sub">early-stopped at ep 26</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--teal)">4.0334</div>
+    <div class="metric-label">Best val loss</div>
+    <div class="metric-sub">label-smoothed CE</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--amber)">56.45</div>
+    <div class="metric-label">Min val PPL</div>
+    <div class="metric-sub">e<sup>4.034</sup></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--green)">46.2 %</div>
+    <div class="metric-label">Best val token acc</div>
+    <div class="metric-sub">peak at epochs 24, 26</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--blue)">12.68</div>
+    <div class="metric-label">Greedy BLEU-4</div>
+    <div class="metric-sub">all 1 934 test pairs · sacrebleu</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--purple)">12.70</div>
+    <div class="metric-label">Beam-5 BLEU-4</div>
+    <div class="metric-sub">500-sample · α = 0.6</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--text)">~510 s</div>
+    <div class="metric-label">Per-epoch time</div>
+    <div class="metric-sub">~3.7 h total to ep 26</div>
+  </div>
+</div>
+
+<div class="alert success">
+  <div class="alert-title">📈 Where the score lands on the BLEU scale</div>
+  Beam-5 BLEU-4 of 12.70 falls in the <strong>"Fair"</strong> band (10–18). The model produces grammatically correct fragments and gets the gist of short sentences, but mis-handles longer ones and rare morphology. The Arabic side of OPUS-100 is also noisy — sacrebleu warned about tokenized periods on 100 lines of the test set.
+</div>
+
+<!-- ─── CURVES & HISTORY ─────────────────────────────────────────── -->
+<h2 class="section" id="curves">Training curves &amp; epoch-by-epoch history</h2>
+<p>From <code>train_epoch / eval_epoch</code> output (Cell 24). Loss columns are label-smoothed CE; PPL = exp(val_loss); Acc% is validation token accuracy ignoring PAD.</p>
+
+<table>
+<thead><tr><th>Epoch</th><th>Train</th><th>Val</th><th>PPL</th><th>Val Acc</th><th>LR</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>8.3077</td><td>7.8069</td><td class="td-bad">2 457.45</td><td class="td-bad">9.4 %</td><td>3.61e-05</td><td class="td-ok">best</td></tr>
+<tr><td>2</td><td>7.1189</td><td>7.2459</td><td class="td-bad">1 402.35</td><td class="td-bad">12.2 %</td><td>7.23e-05</td><td class="td-ok">best</td></tr>
+<tr><td>3</td><td>6.4964</td><td>6.6621</td><td class="td-bad">782.22</td><td class="td-warn">15.5 %</td><td>1.08e-04</td><td class="td-ok">best</td></tr>
+<tr><td>4</td><td>5.9875</td><td>6.1761</td><td class="td-bad">481.09</td><td class="td-warn">19.7 %</td><td>1.45e-04</td><td class="td-ok">best</td></tr>
+<tr><td>5</td><td>5.5643</td><td>5.8425</td><td class="td-bad">344.64</td><td class="td-warn">22.8 %</td><td>1.81e-04</td><td class="td-ok">best</td></tr>
+<tr><td>6</td><td>5.2127</td><td>5.4762</td><td class="td-warn">238.94</td><td class="td-warn">26.4 %</td><td>2.17e-04</td><td class="td-ok">best</td></tr>
+<tr><td>7</td><td>4.8797</td><td>5.2431</td><td class="td-warn">189.26</td><td class="td-warn">28.4 %</td><td>2.53e-04</td><td class="td-ok">best</td></tr>
+<tr><td>8</td><td>4.6006</td><td>4.8993</td><td class="td-warn">134.19</td><td class="td-warn">32.7 %</td><td>2.89e-04</td><td class="td-ok">best</td></tr>
+<tr><td>9</td><td>4.3751</td><td>4.6212</td><td class="td-warn">101.61</td><td class="td-warn">36.1 %</td><td>3.25e-04</td><td class="td-ok">best</td></tr>
+<tr><td>10</td><td>4.1899</td><td>4.4935</td><td class="td-warn">89.43</td><td class="td-warn">38.0 %</td><td>3.61e-04</td><td class="td-ok">best</td></tr>
+<tr><td>11</td><td>4.0399</td><td>4.3977</td><td class="td-warn">81.26</td><td class="td-warn">39.2 %</td><td>3.97e-04</td><td class="td-ok">best</td></tr>
+<tr><td>12</td><td>3.9138</td><td>4.3335</td><td class="td-warn">76.21</td><td class="td-warn">39.9 %</td><td>4.34e-04</td><td class="td-ok">best</td></tr>
+<tr><td>13</td><td>3.8107</td><td>4.2876</td><td class="td-warn">72.79</td><td class="td-warn">41.1 %</td><td>4.70e-04</td><td class="td-ok">best</td></tr>
+<tr><td>14</td><td>3.7106</td><td>4.2003</td><td class="td-warn">66.71</td><td class="td-warn">42.2 %</td><td>4.88e-04</td><td class="td-ok">best</td></tr>
+<tr><td>15</td><td>3.6063</td><td>4.1493</td><td class="td-warn">63.39</td><td class="td-warn">43.1 %</td><td>4.72e-04</td><td class="td-ok">best</td></tr>
+<tr><td>16</td><td>3.5010</td><td>4.1230</td><td class="td-warn">61.74</td><td class="td-warn">43.5 %</td><td>4.57e-04</td><td class="td-ok">best</td></tr>
+<tr><td>17</td><td>3.4029</td><td>4.0764</td><td class="td-warn">58.93</td><td class="td-warn">44.7 %</td><td>4.43e-04</td><td class="td-ok">best</td></tr>
+<tr><td>18</td><td>3.3143</td><td>4.0473</td><td class="td-warn">57.24</td><td class="td-warn">45.3 %</td><td>4.31e-04</td><td class="td-ok">best</td></tr>
+<tr><td>19</td><td>3.2399</td><td>4.0598</td><td class="td-warn">57.96</td><td class="td-warn">45.4 %</td><td>4.19e-04</td><td>no imp 1/5</td></tr>
+<tr><td>20</td><td>3.1542</td><td>4.0492</td><td class="td-warn">57.35</td><td class="td-warn">45.2 %</td><td>4.09e-04</td><td>no imp 2/5</td></tr>
+<tr style="background:rgba(105,219,124,.06)"><td><strong>21</strong></td><td><strong>3.0898</strong></td><td><strong>4.0334</strong></td><td class="td-warn"><strong>56.45</strong></td><td class="td-warn"><strong>45.7 %</strong></td><td>3.99e-04</td><td class="td-ok"><strong>best ★</strong></td></tr>
+<tr><td>22</td><td>3.0280</td><td>4.0937</td><td class="td-warn">59.96</td><td class="td-warn">45.1 %</td><td>3.90e-04</td><td>no imp 1/5</td></tr>
+<tr><td>23</td><td>2.9710</td><td>4.0839</td><td class="td-warn">59.38</td><td class="td-warn">45.5 %</td><td>3.81e-04</td><td>no imp 2/5</td></tr>
+<tr><td>24</td><td>2.9162</td><td>4.0613</td><td class="td-warn">58.05</td><td class="td-warn">46.2 %</td><td>3.73e-04</td><td>no imp 3/5</td></tr>
+<tr><td>25</td><td>2.8698</td><td>4.1596</td><td class="td-warn">64.05</td><td class="td-warn">44.6 %</td><td>3.65e-04</td><td>no imp 4/5</td></tr>
+<tr><td>26</td><td>2.8194</td><td>4.0983</td><td class="td-warn">60.24</td><td class="td-warn">46.2 %</td><td>3.58e-04</td><td class="td-bad">no imp 5/5 · stop</td></tr>
+</tbody>
+</table>
+
+<h3>What the curves show</h3>
+<ul>
+  <li><strong>Steep early descent</strong> (epochs 1–10): val loss drops from 7.81 → 4.49 as Noam LR rises through warmup (3.6e-5 → 3.6e-4) and the model learns the BPE vocabulary distribution.</li>
+  <li><strong>Slow refinement</strong> (epochs 11–18): loss keeps falling smoothly from 4.40 → 4.05; accuracy rises 39 → 45 %. Cross-attention is sharpening into translation alignments.</li>
+  <li><strong>Plateau</strong> (epochs 19–26): val loss oscillates around 4.05–4.10 and accuracy hovers at ~45–46 %. Train loss keeps falling (3.24 → 2.82) — small but real over-fitting opens up.</li>
+  <li><strong>Early stopping</strong> kicks in 5 epochs after the best val loss (epoch 21), correctly saving the checkpoint just before the divergence.</li>
+</ul>
+
+<h3>Translation samples (Cell 14, greedy)</h3>
+<pre><code>EN  the united nations called for peace
+AR  ودعا الأمم المتحدة إلى السلام
+
+EN  the meeting was postponed until next week
+AR  افتتحت الجلسة حتى الأسبوع المقبل
+
+EN  students should study hard to succeed
+AR  يجب أن يرسرس الطلاب بقوة إلى النجاح</code></pre>
+<p style="font-size:13px;color:var(--text3)">The first two are good translations; the third shows the kind of failure typical of a 12-BLEU model — broken morphology (يرسرس is gibberish from byte-fallback) and an over-literal preposition.</p>
+
+<h3>Saved artefacts</h3>
+<table>
+<thead><tr><th>File</th><th>Size</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>best_nmt.pt</code></td><td>216.7 MB</td><td>EarlyStopping checkpoint — model + optimizer + scheduler step (resume-safe)</td></tr>
+<tr><td><code>final_nmt.pt</code></td><td>79.1 MB</td><td>Inference checkpoint — model_state + config + history + BLEU scores</td></tr>
+<tr><td><code>spm_en.model</code> / <code>.vocab</code></td><td>0.4 + 0.1 MB</td><td>SentencePiece BPE for English (8 K pieces)</td></tr>
+<tr><td><code>spm_ar.model</code> / <code>.vocab</code></td><td>0.6 + 0.3 MB</td><td>SentencePiece BPE for Arabic (16 K pieces)</td></tr>
+<tr><td><code>training_curves.png</code></td><td>0.2 MB</td><td>Loss / PPL / Acc% / LR plots from Cell 12</td></tr>
+<tr><td><code>history.json</code></td><td>~3 KB</td><td>Per-epoch numeric history — fed back into the GUI's info tab</td></tr>
+</tbody>
+</table>
+
+<!-- ─── MEMORY SECTION ─────────────────────────────────────────────── -->
+<h2 class="section" id="memory">GPU memory management</h2>
+<p>Understanding what lives on the GPU during training is essential for OOM debugging. Numbers below are for the v2 config (D=512, B=32, MAX_LEN=60, V=16 K, fp16 with AMP) that actually ran on a T4.</p>
+
+<div class="card-grid">
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--purple)">~113</div>
+    <div class="metric-label">Model params (MB)</div>
+    <div class="metric-sub">fp16, 56.39 M params</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--amber)">~451</div>
+    <div class="metric-label">AdamW state (MB)</div>
+    <div class="metric-sub">2× fp32 moments</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--teal)">~115</div>
+    <div class="metric-label">Logits / loss (MB)</div>
+    <div class="metric-sub">B·T·V·2 fp16 fused</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--green)">~280</div>
+    <div class="metric-label">Activations (MB)</div>
+    <div class="metric-sub">12 layers × (B,T,D) checkpointed</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val" style="color:var(--blue)">~960</div>
+    <div class="metric-label">Estimated peak (MB)</div>
+    <div class="metric-sub">comfortably under 15 360 MB on T4</div>
+  </div>
+</div>
+
+<table>
+<thead><tr><th>Tensor category</th><th>Shape</th><th>When allocated</th><th>When freed</th></tr></thead>
+<tbody>
+<tr><td>Model parameters</td><td>(all weights)</td><td>Startup</td><td>End of program</td></tr>
+<tr><td>Optimizer state (AdamW)</td><td>2 × model (fp32)</td><td>First optimizer.step()</td><td>End of program</td></tr>
+<tr><td>Input batch</td><td>(B, T_src)</td><td>DataLoader</td><td>After backward</td></tr>
+<tr><td>Encoder activations</td><td>(B, T, D) × 6 layers</td><td>Forward pass</td><td>After backward completes</td></tr>
+<tr><td>Attention maps</td><td>(B, heads, T, T) × 12</td><td>Forward pass</td><td>After backward (dropped during training via return_attn=False — FIX 5)</td></tr>
+<tr><td>Logits</td><td>(B, T, V) = (32, 60, 16 000)</td><td>fc_out forward</td><td>After loss.item()</td></tr>
+<tr><td>Loss gradients</td><td>same as each param</td><td>backward()</td><td>optimizer.step()</td></tr>
+<tr><td>fp16 scaler state</td><td>tiny</td><td>First step</td><td>End of program</td></tr>
+</tbody>
+</table>
+
+<div style="height:4rem"></div>
+</main>
+
+<script>
+// ─── CELL DATA ──────────────────────────────────────────────────────────────
+const CELLS = [
+  {id:0,name:'env-setup',group:'SETUP',color:'#8b7ff5',
+   title:'Cell 0 — Environment setup',
+   what:'Detects whether you are running on Kaggle, Google Colab, or a local machine, then sets up the correct output directory. Also sets the PYTORCH_ALLOC_CONF environment variable — which MUST happen before any CUDA call.',
+   fix:'FIX 1: os.environ["PYTORCH_ALLOC_CONF"]="expandable_segments:True" must be the very first line before any import torch. If it runs after CUDA is initialised it has no effect.',
+   code:`import os, sys
+
+# FIX 1: MUST run before any CUDA call
+os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
+
+ON_KAGGLE = os.path.exists('/kaggle/working')
+ON_COLAB  = 'google.colab' in sys.modules
+
+if ON_KAGGLE:
+    OUTPUT_DIR = '/kaggle/working/nmt_checkpoints'
+elif ON_COLAB:
+    from google.colab import drive
+    drive.mount('/content/drive')
+    OUTPUT_DIR = '/content/drive/MyDrive/NMT_Checkpoints'
+else:
+    OUTPUT_DIR = './nmt_checkpoints'
+os.makedirs(OUTPUT_DIR, exist_ok=True)`,
+   watch:'If you restart the kernel, this cell MUST re-run before training resumes.'},
+
+  {id:1,name:'install',group:'SETUP',color:'#8b7ff5',
+   title:'Cell 1 — Install dependencies',
+   what:'Installs the three non-standard libraries needed: datasets (HuggingFace dataset loader), sacrebleu (standardised BLEU computation), and sentencepiece (Google\'s BPE tokenizer used by most production MT systems including Google Translate).',
+   fix:'No fixes in this cell.',
+   code:`!pip install datasets sacrebleu sentencepiece --quiet`,
+   watch:'On Kaggle, add these to the notebook settings under "Add-ons → PyPI packages" for offline kernels. On Colab they need to re-install each session.'},
+
+  {id:2,name:'imports',group:'SETUP',color:'#8b7ff5',
+   title:'Cell 2 — Imports & reproducibility',
+   what:'Sets SEED=42 on Python random, NumPy, and PyTorch (including all CUDA devices). Detects the GPU, checks VRAM, and sets fp16_ok=True if >= 10 GB is available (covers T4=15GB, P100=16GB). Also enables TF32 mode (FIX 2).',
+   fix:'FIX 2: torch.backends.cuda.matmul.allow_tf32 = True gives ~2× throughput on Ampere GPUs (A100, RTX 30xx) for free. On T4/P100 (Turing/Volta) the flag is silently ignored — no risk to always set it.',
+   code:`torch.manual_seed(42)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(42)
+    torch.backends.cudnn.deterministic = True
+    # FIX 2: TF32 — free speed on Ampere, harmless on T4
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32       = True
+
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+mem = torch.cuda.get_device_properties(0).total_memory / 1e9
+fp16_ok = mem >= 10  # T4 = 15 GB ✅`,
+   watch:'If fp16_ok prints False, you are on CPU — go to Kaggle Settings → Accelerator → T4 GPU or Colab Runtime → Change Runtime → T4 GPU.'},
+
+  {id:3,name:'hyperparameters',group:'CONFIG',color:'#ffa94d',
+   title:'Cell 3 — Hyperparameters (FIX 3)',
+   what:'All training hyperparameters. This is the single cell you touch to tune the model. The v2 notebook scales D_MODEL up to 512 (paper standard) and compensates with smaller batches + more accumulation so the (B,T,V) tensors stay small enough for the T4.',
+   fix:'FIX 3 (v2 numbers): BATCH_SIZE 128 → 32 — halves every (B,T,V) tensor twice. GRAD_ACCUM 4 → 16 — keeps effective batch at 32×16 = 512. TRAIN_LIMIT 500K → 300K — faster epochs, less dataset RAM. MAX_LEN was kept at 60 because attention cost is amortised by the smaller batch.',
+   code:`MAX_LEN      = 60
+D_MODEL      = 512        # paper standard, biggest single quality lever
+N_HEADS      = 8          # d_k = 64 per head
+N_LAYERS     = 6          # 6 enc + 6 dec
+D_FF         = 2048       # 4 × D_MODEL
+DROPOUT      = 0.1        # was 0.2 — over-regularising small models
+BATCH_SIZE   = 32         # FIX 3: was 128 → 64 → 32
+GRAD_ACCUM   = 16         # eff. batch = 32 × 16 = 512
+N_EPOCHS     = 30         # early-stops in practice (~26)
+WARMUP       = 8000       # longer warmup for D=512
+TRAIN_LIMIT  = 300_000    # 30% of OPUS-100 train split
+WEIGHT_DECAY = 1e-4
+EN_VOCAB     = 8_000
+AR_VOCAB     = 16_000`,
+   watch:'D_MODEL must be divisible by N_HEADS (assert in code). The estimated per-step loss memory printed at the end of this cell drops from ~984 MB (B=128) to ~123 MB (B=32) — that is FIX 3 + FIX 4 combined.'},
+
+  {id:4,name:'dataset',group:'DATA',color:'#4ecdc4',
+   title:'Cell 4 — Load OPUS-100 dataset',
+   what:'Downloads the Helsinki-NLP/opus-100 Arabic-English dataset from HuggingFace. OPUS-100 is a 100-language parallel corpus built from web-crawled sources. It has 1M train pairs, 2K val, 2K test for AR-EN. The first run downloads ~200 MB; subsequent runs load from cache.',
+   fix:'No fixes here.',
+   code:`from datasets import load_dataset
+opus = load_dataset('Helsinki-NLP/opus-100', 'ar-en',
+                    trust_remote_code=True)
+# opus['train'] has 1,000,000 pairs
+# We use only TRAIN_LIMIT = 300,000 (random sample)`,
+   watch:'OPUS-100 is a noisy web-crawled dataset. Some pairs are misaligned or duplicate. The ratio filter in Cell 5 removes the worst cases.'},
+
+  {id:5,name:'preprocessing',group:'DATA',color:'#4ecdc4',
+   title:'Cell 5 — Preprocessing & pair building',
+   what:'Cleans text (lowercase, normalise Unicode, tokenise punctuation) and filters pairs. The ratio filter (0.3 ≤ AR/EN ≤ 3.0) removes pairs where the Arabic is extremely long compared to English (likely misaligned) or extremely short (likely noise).',
+   fix:'No fixes here.',
+   code:`def preprocess_en(text):
+    text = text.lower().strip()
+    text = re.sub(r'([.!?,;:])', r' \1 ', text)
+    return re.sub(r'\\s+', ' ', text).strip()
+
+def preprocess_ar(text):
+    text = unicodedata.normalize('NFC', text.strip())
+    text = re.sub(r'([?!.،,؛])', r' \1 ', text)
+    return re.sub(r'\\s+', ' ', text).strip()
+
+# length filter: 1 ≤ word_count ≤ MAX_LEN
+# ratio filter:  0.3 ≤ AR/EN ≤ 3.0`,
+   watch:'Arabic uses right-to-left Unicode. Make sure your editor and terminal support RTL text when debugging. unicodedata.normalize("NFC") is critical — Arabic can encode the same character multiple ways.'},
+
+  {id:6,name:'bpe',group:'DATA',color:'#4ecdc4',
+   title:'Cell 6 — BPE tokenisation (SentencePiece)',
+   what:'Trains two BPE (Byte-Pair Encoding) tokenisers: English with 8,000 subword pieces and Arabic with 16,000. BPE works by merging the most frequent adjacent character pairs iteratively, creating a vocabulary of subword units. This handles morphology better than word-level tokenisation — "postponed" might tokenise to ["▁post", "poned"].',
+   fix:'byte_fallback=True ensures zero unknown tokens — any character that doesn\'t appear in training is represented as UTF-8 byte pieces.',
+   code:`spm.SentencePieceTrainer.train(
+    sentence_iterator = iter(sentences),
+    model_prefix      = prefix,
+    vocab_size         = vocab_size,
+    model_type         = 'bpe',
+    pad_id=0, bos_id=1, eos_id=2, unk_id=3,
+    byte_fallback=True  # zero <unk> tokens
+)
+# Arabic needs 16K (vs English 8K) because
+# Arabic morphology creates far more unique subwords`,
+   watch:'Why 16K for Arabic? Arabic verbs conjugate for person, gender, number, tense, and voice. The word "يكتبون" is "they (m.pl.) are writing" — a complete sentence in one word. You need more vocab pieces to cover this.'},
+
+  {id:7,name:'dataloader',group:'DATA',color:'#4ecdc4',
+   title:'Cell 7 — Dataset & DataLoader',
+   what:'Creates a BucketSampler that sorts training pairs by source length before batching. This ensures batches contain sentences of similar length, minimising padding tokens. A batch of all 50-token sentences wastes no memory on padding; a mixed batch of 5-token and 50-token sentences wastes ~90% of the shorter sequence slots.',
+   fix:'No OOM fix here, but BucketSampler is essential for efficient training. Without it, 20–40% of compute is spent on PAD tokens.',
+   code:`class BucketSampler(torch.utils.data.Sampler):
+    # Sort by length → group similar-length seqs
+    # Shuffle within each bucket (preserves diversity)
+    # Shuffle bucket order (shuffles epochs)
+    # Result: 15-20% less padding than random batching
+
+# DataLoader with pin_memory=True on GPU:
+# pinned memory allows async CPU→GPU transfer
+# num_workers=2 pre-fetches next batch while GPU trains`,
+   watch:'BucketSampler.__len__ must return the correct number of batches for the progress bar and scheduler to work correctly. The implementation uses ceil division to include the last partial batch.'},
+
+  {id:8,name:'architecture',group:'MODEL',color:'#69db7c',
+   title:'Cell 8 — Transformer architecture',
+   what:'The full transformer from scratch using nn.Module. Contains: PositionalEncoding (sin/cos), MultiHeadAttention (Q/K/V projections, scaled dot-product), PositionwiseFeedForward (GELU), EncoderLayer (Pre-Norm + residuals), DecoderLayer (3 sublayers), Encoder stack, Decoder stack, full Transformer with weight tying, greedy decode, and beam search.',
+   fix:'return_attn parameter added (FIX 5): passing return_attn=False during training skips accumulating 12 attention weight lists (6 enc + 6 dec), saving ~200 MB of GPU memory per step.',
+   code:`class MultiHeadAttention(nn.Module):
+    # d_k = d_model / n_heads = 256/8 = 32
+    # scale = sqrt(d_k) = sqrt(32) ≈ 5.66
+    # Without scale, dot products grow with d_k
+    # and softmax saturates → vanishing gradients
+
+# Pre-Norm pattern (stable for 6 layers):
+_n1 = self.norm1(src)          # normalise first
+_src, attn = self.self_attn(_n1, _n1, _n1, mask)
+src = src + self.dropout(_src) # residual AFTER`,
+   watch:'The causal mask for the decoder is critical. It must prevent position t from attending to positions t+1, t+2, ... during training. Without it the model "cheats" by looking at future tokens and gets high training accuracy but zero inference quality.'},
+
+  {id:9,name:'instantiate',group:'MODEL',color:'#69db7c',
+   title:'Cell 9 — Instantiate model',
+   what:'Creates the Transformer instance with the hyperparameters from Cell 3 and moves it to GPU. Also counts and prints the parameter breakdown by component.',
+   fix:'No fixes here.',
+   code:`model = Transformer(
+    src_vocab = EN_VOCAB,  # 8,000
+    tgt_vocab = AR_VOCAB,  # 16,000
+    d_model   = D_MODEL,   # 512
+    n_layers  = N_LAYERS,  # 6
+    n_heads   = N_HEADS,   # 8
+    d_ff      = D_FF,      # 2048
+    dropout   = DROPOUT,   # 0.1
+).to(DEVICE)
+# Printed by the notebook:
+#   Encoder : 22,999,040 params
+#   Decoder : 33,392,640 params
+#   Total   : 56,391,680 params  (~225 MB fp32 / ~113 MB fp16)`,
+   watch:'Weight tying is applied in __init__: fc_out.weight = decoder.embedding.weight. The decoder count includes the tied output projection. Going from D=256 to D=512 roughly triples total params (≈ 17 M → 56 M).'},
+
+  {id:10,name:'optimizer-loss',group:'TRAIN',color:'#ff6b6b',
+   title:'Cell 10 — Optimizer, scheduler, loss (FIX 4 + FIX 6)',
+   what:'Sets up AdamW optimizer, Noam LR scheduler, EarlyStopping, and the loss function. Contains FIX 4 (the primary OOM fix — replaced custom loss with nn.CrossEntropyLoss) and FIX 6 (save/restore scheduler.step_n in checkpoints).',
+   fix:'FIX 4: nn.CrossEntropyLoss(label_smoothing=0.1) replaces the custom class. Built-in version uses a fused CUDA kernel — never materialises the (N,V) distribution tensor. Saves ~740 MB. FIX 6: checkpoint now saves scheduler.step_n so LR is correct after resume.',
+   code:`# FIX 4: drop custom LabelSmoothingLoss
+criterion = nn.CrossEntropyLoss(
+    ignore_index    = PAD_IDX,
+    label_smoothing = 0.1   # same math, fused kernel
+)
+# FIX 6: save scheduler step for correct resume
+torch.save({
+    'model_state'    : model.state_dict(),
+    'scheduler_step' : scheduler.step_n,  # ← FIX 6
+    'epoch'          : epoch,
+    'best_loss'      : self.best_loss,
+}, self.ckpt_path)`,
+   watch:'AdamW beta2=0.98 and eps=1e-9 are the transformer-specific values from the original paper. Using the default beta2=0.999 gives slightly slower convergence on this task.'},
+
+  {id:11,name:'training-loop',group:'TRAIN',color:'#ff6b6b',
+   title:'Cell 11 — Training loop (FIX 5)',
+   what:'The main train_epoch and eval_epoch functions plus the epoch loop. FIX 5 adds return_attn=False during training and empty_cache() calls to prevent memory fragmentation between epochs and between train/eval phases.',
+   fix:'FIX 5a: return_attn=False — skips building attention weight lists during training (we only need them for visualisation). FIX 5b: del enc_attn, dec_attn after loss. FIX 5c: torch.cuda.empty_cache() at start of each epoch. FIX 5d: empty_cache() between train and eval.',
+   code:`# FIX 5a: don't accumulate attention during training
+logits, enc_attn, dec_attn = model(
+    src, tgt_in, return_attn=False)
+
+# FIX 5b: release immediately
+del enc_attn, dec_attn
+
+# FIX 5c/5d: defragment between phases
+torch.cuda.empty_cache()`,
+   watch:'Gradient accumulation: the loss is divided by GRAD_ACCUM before backward. This means loss.item() * GRAD_ACCUM gives you the true unscaled loss for logging. The code handles the last partial accumulation step at the end of each epoch.'},
+
+  {id:12,name:'curves',group:'EVAL',color:'#4ecdc4',
+   title:'Cell 12 — Training curves',
+   what:'Plots four curves: (1) train and val loss, (2) validation perplexity, (3) validation token accuracy (FIX 7 — new metric), (4) Noam learning rate schedule. Saves to OUTPUT_DIR as training_curves.png.',
+   fix:'FIX 7: token accuracy was added as a new metric. It measures the fraction of non-PAD tokens predicted correctly each epoch. More informative than loss for understanding real model quality during training.',
+   code:`# Token accuracy: fraction of correct non-PAD predictions
+def token_accuracy(logits, targets):
+    preds = logits.argmax(-1)       # (B, T)
+    mask  = targets != PAD_IDX
+    return (preds[mask] == targets[mask]
+            ).float().mean().item()`,
+   watch:'The learning rate curve should show a clean triangle: linear rise for warmup_steps, then smooth decay. If it looks like noise, the scheduler\'s step_n was not restored correctly from the checkpoint (FIX 6).'},
+
+  {id:13,name:'bleu-eval',group:'EVAL',color:'#4ecdc4',
+   title:'Cell 13 — BLEU evaluation',
+   what:'Runs translation on the full test set and computes corpus BLEU-4 score using sacrebleu. First runs greedy decoding on all 1,934 test pairs, then beam-5 on a 500-pair sample. sacrebleu ensures standardised tokenisation so scores are comparable with published results.',
+   fix:'No fixes here.',
+   code:`# sacrebleu.corpus_bleu: standardised BLEU
+bleu_g = scb.corpus_bleu(hyps_greedy, [refs_str])
+print(f'Greedy BLEU-4 : {bleu_g.score:.2f}')   # → 12.68
+
+# Beam-5 on 500 samples
+hyps_beam = [decode(model.translate_beam(
+    encode(en), beam_width=5)) for en in sample]
+bleu_b = scb.corpus_bleu(hyps_beam, [refs_sample])
+print(f'Beam-5 BLEU-4 : {bleu_b.score:.2f}')   # → 12.70`,
+   watch:'Beam-5 is barely above greedy here (12.70 vs 12.68) because the model has not converged sharply enough for beam search to find globally better paths — both decoders are settling on similar prefixes. With more training the beam gap typically widens to +1.5 to +3 BLEU. sacrebleu also warned about tokenized periods on 100 lines — the OPUS-100 test reference has its own punctuation idiosyncrasies that are worth aware of when comparing to published scores.'},
+
+  {id:14,name:'attention-viz',group:'EVAL',color:'#4ecdc4',
+   title:'Cell 14 — Attention visualisation',
+   what:'Plots cross-attention heatmaps showing which English tokens the model attends to when generating each Arabic word. These are the attention weights from the last decoder layer\'s cross-attention head, averaged over all 8 heads.',
+   fix:'No fixes here.',
+   code:`def plot_attention(en_text, ar_ids, attn_matrix):
+    # attn_matrix: (T_tgt, T_src)
+    # Row i = Arabic token i's attention over EN
+    # Col j = how much attention goes to EN token j
+    # Hot diagonal = monotone alignment (common)
+    # Crossed lines = reordering (common in AR-EN)`,
+   watch:'Arabic reads right-to-left but the x-axis shows English left-to-right. The attention patterns often show "crossed" alignments because Arabic word order is VSO (verb-subject-object) vs English SVO. This is normal and expected.'},
+
+  {id:15,name:'save',group:'SAVE',color:'#ffa94d',
+   title:'Cell 15 — Save final checkpoint',
+   what:'Saves the final model state plus metadata (training history, BLEU scores, config). On Colab triggers a file download dialog. On Kaggle the file appears in the Output tab.',
+   fix:'No fixes here.',
+   code:`torch.save({
+    'model_state' : model.state_dict(),
+    'history'     : history,
+    'best_epoch'  : es.best_epoch,
+    'bleu_greedy' : bleu_g.score,
+    'bleu_beam5'  : bleu_b.score,
+    'config' : dict(
+        src_vocab=EN_VOCAB, tgt_vocab=AR_VOCAB,
+        d_model=D_MODEL, n_layers=N_LAYERS)
+}, FINAL_CKPT)`,
+   watch:'To reload the model later: model = Transformer(**ckpt["config"]).to(DEVICE) then model.load_state_dict(ckpt["model_state"]). The config dict ensures you instantiate the model with the correct architecture before loading weights.'},
+];
+
+// ─── GLOSSARY DATA ──────────────────────────────────────────────────────────
+const GLOSSARY = [
+  {term:'BLEU-4',def:'Bilingual Evaluation Understudy. Measures n-gram overlap between hypothesis and reference. The "-4" means it uses up to 4-grams.',formula:'BLEU = BP × exp((1/4)Σ log pₙ)'},
+  {term:'PPL',def:'Perplexity. exp(CE_loss). How many equally likely next-token choices the model sees. Lower = more confident = better.',formula:'PPL = eˡᵒˢˢ  ·  Target: PPL < 20'},
+  {term:'CE Loss',def:'Cross-Entropy Loss. Negative log-probability assigned to the correct token. Training objective.',formula:'CE = -log P(correct_token | context)'},
+  {term:'Label Smoothing',def:'Distributes ε=0.1 probability mass to non-correct tokens. Prevents overconfidence, improves generalisation.',formula:'target[i] = ε/(V-1)  if i≠gold, else 1-ε'},
+  {term:'BPE',def:'Byte-Pair Encoding. Iteratively merges most frequent adjacent character pairs. Handles morphology and OOV words.',formula:'8K EN pieces · 16K AR pieces'},
+  {term:'D_MODEL',def:'Embedding dimension. The width of the internal representation vector. Every token is represented as a D_MODEL-dim vector.',formula:'D=256 (current) · D=512 (recommended)'},
+  {term:'N_HEADS',def:'Number of attention heads in Multi-Head Attention. Each head learns different relationships.',formula:'d_k = D_MODEL / N_HEADS = 32'},
+  {term:'D_FF',def:'Feed-forward inner dimension. Each position is projected to D_FF then back. Should be 4×D_MODEL.',formula:'256→1024→256 or 512→2048→512'},
+  {term:'N_LAYERS',def:'Number of encoder + decoder layers. Each layer is one self-attention + one FFN (encoder) or two attentions + FFN (decoder).',formula:'6 enc + 6 dec = 12 total layers'},
+  {term:'DROPOUT',def:'Fraction of activations randomly set to zero during training. Regularisation — prevents overfitting.',formula:'0.1–0.3 · Higher = more regularisation'},
+  {term:'BATCH_SIZE',def:'Number of sentence pairs processed per gradient step. Larger = more stable gradients but more memory.',formula:'64 (OOM-safe) · 32 (D=512 config)'},
+  {term:'GRAD_ACCUM',def:'Gradient accumulation steps. Accumulates gradients over N mini-batches before updating weights.',formula:'Effective batch = BATCH_SIZE × GRAD_ACCUM'},
+  {term:'WARMUP',def:'Number of Noam scheduler steps with linearly increasing LR. Prevents exploding gradients at start.',formula:'4000 steps · ~6-8 epochs at B=64'},
+  {term:'MAX_LEN',def:'Maximum sequence length. Pairs longer than this are discarded. Attention is O(T²) so shorter = less memory.',formula:'50 (current) · 60 (original)'},
+  {term:'CLIP',def:'Gradient clipping threshold. Clips gradients whose L2 norm exceeds CLIP=1.0. Prevents gradient explosions.',formula:'grad = grad × (1.0 / max(1.0, norm))'},
+  {term:'SOS / EOS',def:'Start-of-Sequence and End-of-Sequence tokens. Decoder starts with SOS, stops generating when it predicts EOS.',formula:'SOS_IDX=1 · EOS_IDX=2 · PAD_IDX=0'},
+  {term:'PAD_IDX',def:'Padding token index (0). Short sequences are padded to match the longest sequence in a batch.',formula:'Masked out in loss with ignore_index=PAD_IDX'},
+  {term:'Weight Tying',def:'The output projection layer shares its weight matrix with the Arabic embedding layer.',formula:'fc_out.weight = decoder.embedding.weight'},
+  {term:'Pre-Norm',def:'Apply LayerNorm BEFORE the sublayer (attention or FFN), not after. More stable for 6+ layers.',formula:'x = x + dropout(sublayer(norm(x)))'},
+  {term:'Residual Connection',def:'Add the input directly to the sublayer output: x = x + sublayer(x). Critical for gradient flow in deep networks.',formula:'x = x + dropout(attn(norm(x)))'},
+  {term:'Scaled Dot-Product',def:'The core attention operation. Scale by √d_k prevents softmax saturation from large dot products.',formula:'Attention(Q,K,V) = softmax(QKᵀ/√d_k)V'},
+  {term:'Causal Mask',def:'Upper-triangular boolean mask applied to decoder self-attention. Position t can only see positions 0..t.',formula:'mask[i][j] = False if j > i  (set to -inf)'},
+  {term:'GELU',def:'Gaussian Error Linear Unit. Smoother non-linearity than ReLU. Used in FFN layers. Typically +0.2–0.3 BLEU vs ReLU.',formula:'GELU(x) = x × Φ(x)  where Φ = CDF of N(0,1)'},
+  {term:'AdamW',def:'Adam with weight decay decoupled from the gradient. Improves generalisation versus standard Adam.',formula:'θ = θ - lr × (adam_update + λθ)'},
+  {term:'fp16 / AMP',def:'16-bit floating point + Automatic Mixed Precision. Halves memory for most tensors, doubles throughput.',formula:'GradScaler prevents underflow in fp16 backward'},
+  {term:'Noam Schedule',def:'LR schedule from "Attention Is All You Need". Linear warmup then inverse-sqrt decay.',formula:'lr = D⁻⁰·⁵ × min(step⁻⁰·⁵, step×W⁻¹·⁵)'},
+  {term:'GradScaler',def:'Scales loss upward before backward to prevent fp16 underflow. Unscales before optimizer.step().',formula:'scaler.scale(loss).backward()'},
+  {term:'Token Accuracy',def:'Fraction of non-PAD tokens predicted correctly per epoch. More direct quality metric than loss.',formula:'correct_tokens / total_non_pad_tokens'},
+  {term:'Beam Search',def:'Maintains top-K hypotheses at each step. Finds the globally best sequence vs greedy\'s local best.',formula:'beam_width=5 · length_penalty α=0.6'},
+  {term:'Length Penalty',def:'Penalty applied in beam search to prevent the model from preferring short translations.',formula:'LP = ((5+len)/6)^α · α=0.6 (standard)'},
+  {term:'Encoder Memory',def:'The encoder\'s output tensor (B, T_src, D). Used as Keys and Values in decoder cross-attention.',formula:'shape: (batch_size, src_len, d_model)'},
+  {term:'Cross-Attention',def:'Decoder attention where Query comes from the decoder state and Key/Value come from encoder memory.',formula:'Q=decoder · K=memory · V=memory'},
+  {term:'Early Stopping',def:'Stop training when validation loss doesn\'t improve for N consecutive epochs (patience=5).',formula:'if counter >= patience: stop training'},
+  {term:'BucketSampler',def:'DataLoader sampler that groups sequences of similar length together to minimise padding waste.',formula:'~15-20% less wasted compute vs random'},
+  {term:'OPUS-100',def:'Helsinki-NLP corpus of 100 language pairs, scraped from web sources. 1M pairs for AR-EN.',formula:'Helsinki-NLP/opus-100 on HuggingFace'},
+  {term:'sacrebleu',def:'Standardised BLEU computation library. Ensures reproducible, comparable BLEU scores.',formula:'scb.corpus_bleu(hypotheses, [references])'},
+  {term:'expandable_segments',def:'PyTorch allocator mode that grows memory segments on demand instead of fixed-size slabs.',formula:'Eliminates "reserved but unallocated" OOM'},
+  {term:'SentencePiece',def:'Google\'s tokenizer library. Implements BPE (and others) at the character level, language-agnostic.',formula:'sp.encode(text) → list of integer IDs'},
+  {term:'OPUS-100',def:'Helsinki-NLP multi-language parallel corpus. 1M AR-EN training pairs from web-crawled sources.',formula:'load_dataset("Helsinki-NLP/opus-100","ar-en")'},
+  {term:'MSE / CE',def:'Mean Squared Error (regression) vs Cross-Entropy (classification). NMT uses CE because generating tokens is classification over the vocabulary.',formula:'CE used here — V=16K classes per step'},
+];
+
+// ─── HYPERPARAMETER TABLE DATA ────────────────────────────────────────────
+// Values reflect the v2 notebook (nmt-transformerv2 (1).ipynb) actually used for the run.
+const HPARAMS = [
+  {param:'D_MODEL',val:'512',effect:'Width of all internal representations. Bottleneck of model capacity.',tune:'512 is the paper standard for EN→AR. Going to 768 helps slightly but doubles training time on a T4.'},
+  {param:'N_HEADS',val:'8',effect:'Number of parallel attention heads. Each captures different token relationships.',tune:'Must divide D_MODEL exactly. With D=512 → d_k=64 per head.'},
+  {param:'N_LAYERS',val:'6',effect:'Depth of encoder and decoder stacks. More layers = more abstraction capacity.',tune:'6 is the paper standard. 4 trains ~30% faster but loses ~1 BLEU. 8 rarely helps without much more data.'},
+  {param:'D_FF',val:'2048',effect:'Inner dimension of feed-forward networks. Standard ratio is 4×D_MODEL.',tune:'Keep at 4×D_MODEL. The FFN is where most non-attention compute happens.'},
+  {param:'DROPOUT',val:'0.1',effect:'Regularisation strength. Higher prevents overfitting but slows convergence.',tune:'0.1 was the chosen value (was 0.2 earlier and was over-regularising). Raise to 0.2 only if train loss << val loss.'},
+  {param:'BATCH_SIZE',val:'32',effect:'Pairs per gradient step. Larger = more stable gradients but exponentially more memory.',tune:'32 fits D=512 in 15.6 GB T4 VRAM with fp16. P100 (16 GB) can fit 48 with care.'},
+  {param:'GRAD_ACCUM',val:'16',effect:'Gradient accumulation steps. Simulates a larger batch without the memory cost.',tune:'Effective batch = BATCH_SIZE × GRAD_ACCUM = 32 × 16 = 512. Reduce GRAD_ACCUM proportionally if you increase BATCH_SIZE.'},
+  {param:'N_EPOCHS',val:'30',effect:'Maximum number of training passes. EarlyStopping fires before the cap in practice.',tune:'30 is plenty with patience=5 (training stopped at epoch 26). For more data use 50 and let ES decide.'},
+  {param:'WARMUP',val:'8000',effect:'Noam LR warmup steps. Linear LR increase before inverse-sqrt decay begins.',tune:'8000 is right for D=512 + effective batch 512. Roughly equal to one epoch of training updates.'},
+  {param:'TRAIN_LIMIT',val:'300K',effect:'Number of training pairs sampled from the 1M OPUS-100 pairs.',tune:'300K is the speed/quality balance for a single Kaggle session. Doubling to 600K usually buys +1–2 BLEU.'},
+  {param:'MAX_LEN',val:'60',effect:'Maximum source/target length in tokens. Pairs longer than this are dropped.',tune:'60 covers ~98% of OPUS-100 pairs. Attention is O(T²), so 60→80 costs ~78% more attention memory.'},
+  {param:'LABEL_SMOOTH',val:'0.1',effect:'Probability mass redistributed to non-target tokens. Prevents overconfidence.',tune:'0.1 is the standard. Implemented via nn.CrossEntropyLoss(label_smoothing=0.1) since FIX 4.'},
+  {param:'CLIP',val:'1.0',effect:'Gradient clipping norm. Prevents gradient explosions, especially early in training.',tune:'1.0 is safe for all transformer sizes. Rarely needs changing.'},
+  {param:'EN_VOCAB',val:'8 000',effect:'Number of English BPE subword pieces.',tune:'8K is sufficient for English. 16K gives marginal improvement but doubles embedding memory.'},
+  {param:'AR_VOCAB',val:'16 000',effect:'Number of Arabic BPE subword pieces. Arabic needs 2× the English vocab due to morphology.',tune:'16K with byte_fallback=True keeps the <unk> rate near zero.'},
+  {param:'WEIGHT_DECAY',val:'1e-4',effect:'L2 regularisation on weights via AdamW. Prevents large weight magnitudes.',tune:'1e-4 is fine. Increase to 1e-3 only if you see overfitting (train loss << val loss).'},
+  {param:'beam_width',val:'5',effect:'Number of hypotheses maintained in beam search. Higher = better quality, slower inference.',tune:'5 is the standard. With α=0.6 length penalty, 10 rarely helps beyond 5.'},
+];
+
+// ─── BUILD CELL TABS AND PANELS ─────────────────────────────────────────────
+function buildCells(){
+  const tabs = document.getElementById('cell-tabs');
+  const panels = document.getElementById('cell-panels');
+  CELLS.forEach((c,i)=>{
+    const tab = document.createElement('button');
+    tab.className='cell-tab'+(i===0?' active':'');
+    tab.textContent=`Cell ${c.id}`;
+    tab.onclick=()=>{
+      document.querySelectorAll('.cell-tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.cell-card').forEach(p=>p.classList.remove('visible'));
+      tab.classList.add('active');
+      document.getElementById(`cell-${c.id}`).classList.add('visible');
+    };
+    tabs.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className='cell-card card'+(i===0?' visible':'');
+    panel.id=`cell-${c.id}`;
+    panel.innerHTML=`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem">
+        <span style="background:${c.color}22;color:${c.color};border:1px solid ${c.color}55;padding:2px 8px;border-radius:999px;font-size:11px;font-family:'JetBrains Mono',monospace">${c.group}</span>
+        <span style="font-size:15px;font-weight:500">${c.title}</span>
+      </div>
+      <h3 style="font-size:13px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem">What it does</h3>
+      <p style="font-size:13.5px;margin-bottom:.75rem">${c.what}</p>
+      ${c.fix&&c.fix!=='No fixes here.'&&c.fix!=='No fixes in this cell.'?`<div class="alert danger" style="font-size:13px;margin-bottom:.75rem"><div class="alert-title">🔧 OOM Fix</div>${c.fix}</div>`:''}
+      ${c.fix==='No fixes here.'||c.fix==='No fixes in this cell.'?`<div class="alert success" style="font-size:12.5px;margin-bottom:.75rem"><div class="alert-title">✅ No OOM changes</div>${c.fix}</div>`:''}
+      <h3 style="font-size:13px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem">Key code</h3>
+      <pre><code>${c.code}</code></pre>
+      <div class="alert warn" style="font-size:12.5px;margin-top:.5rem"><div class="alert-title">👀 Watch for</div>${c.watch}</div>
+    `;
+    panels.appendChild(panel);
+  });
+}
+
+// ─── BUILD GLOSSARY ─────────────────────────────────────────────────────────
+function buildGlossary(){
+  const grid = document.getElementById('glossary-grid');
+  GLOSSARY.forEach(g=>{
+    const div = document.createElement('div');
+    div.className='gterm';
+    div.innerHTML=`<div class="gterm-title">${g.term}</div><div class="gterm-def">${g.def}</div><div class="gterm-formula">${g.formula}</div>`;
+    grid.appendChild(div);
+  });
+}
+
+// ─── BUILD HPARAM TABLE ─────────────────────────────────────────────────────
+function buildHParams(){
+  const tbody = document.getElementById('hparam-table');
+  HPARAMS.forEach(h=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML=`
+      <td class="td-code">${h.param}</td>
+      <td class="td-code td-warn">${h.val}</td>
+      <td style="font-size:13px">${h.effect}</td>
+      <td style="font-size:12.5px;color:var(--green)">${h.tune}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── NAV ────────────────────────────────────────────────────────────────────
+function scrollTo(id){
+  document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.classList.toggle('active',n.getAttribute('onclick')===`scrollTo('${id}')`);
+  });
+}
+
+function filterNav(query){
+  const q = query.toLowerCase();
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    const label = n.dataset.label||'';
+    const text = n.textContent.toLowerCase();
+    n.style.display = (!q||text.includes(q)||label.includes(q))?'':'none';
+  });
+}
+
+// Highlight active section on scroll
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const id = e.target.id;
+      document.querySelectorAll('.nav-item').forEach(n=>{
+        n.classList.toggle('active',n.getAttribute('onclick')===`scrollTo('${id}')`);
+      });
+    }
+  });
+},{threshold:0.2});
+
+document.addEventListener('DOMContentLoaded',()=>{
+  buildCells();
+  buildGlossary();
+  buildHParams();
+  document.querySelectorAll('.section').forEach(s=>observer.observe(s));
+});
+</script>
+</body>
+</html>

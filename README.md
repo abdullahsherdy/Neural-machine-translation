@@ -173,11 +173,76 @@ Both notebooks compute BLEU-4 using an implementation with add-1 smoothing, eval
 
 ```
 .
-├── nmt_english_arabic_colab.ipynb     # RNN + Bahdanau attention
-├── transformer_nmt_colab.ipynb        # Transformer encoder-decoder
-├── ara_.txt                           # Parallel corpus (add manually)
+├── app/
+│   ├── model.py                       # Transformer architecture (mirrors the notebook)
+│   ├── inference.py                   # Checkpoint loader + translation helpers
+│   └── gui.py                         # Gradio web GUI
+├── data/
+│   └── ara_.txt                       # Parallel corpus (Tatoeba)
+├── output/
+│   ├── final_nmt.pt                   # Trained Transformer checkpoint (added after training)
+│   ├── spm_en.model                   # SentencePiece BPE for English
+│   ├── spm_ar.model                   # SentencePiece BPE for Arabic
+│   ├── training_curves.png
+│   ├── attention_heatmaps.png
+│   ├── per_head_attention.png
+│   └── lr_schedule.png
+├── src/
+│   ├── nmt_english_arabic_colab.ipynb # RNN + Bahdanau attention
+│   ├── transformer_nmt_colab.ipynb    # Transformer (Colab)
+│   └── notebook32f2863234.ipynb       # Transformer (Kaggle, OPUS-100, current run)
+├── requirements.txt
 └── README.md
 ```
+
+---
+
+## GUI
+
+A Gradio web GUI lives in `app/`. It loads the trained Transformer and lets
+you translate English sentences to Arabic interactively, with a translation
+history panel and a model-info panel.
+
+### Install
+
+```
+pip install -r requirements.txt
+```
+
+### Drop the trained files into `output/`
+
+After the Kaggle notebook (`src/notebook32f2863234.ipynb`) finishes, download
+these three files from the Kaggle **Output** tab and place them in
+`output/`:
+
+| File | Source |
+|---|---|
+| `final_nmt.pt` | last cell of the notebook (`torch.save(...)`) |
+| `spm_en.model` | trained in the BPE cell |
+| `spm_ar.model` | trained in the BPE cell |
+
+### Run
+
+```
+python -m app.gui
+```
+
+Then open the printed URL (default `http://127.0.0.1:7860`).
+
+The GUI also launches if the model files are not yet there: it shows a
+"waiting for files" banner. Once you drop the files in, click
+**Reload model** in the *Model info* tab.
+
+Useful flags:
+
+| Flag | Meaning |
+|---|---|
+| `--model-dir PATH` | Where to look for `final_nmt.pt` etc. (default: `./output`) |
+| `--host HOST` | Bind host (default: `127.0.0.1`) |
+| `--port PORT` | Bind port (default: `7860`) |
+| `--share` | Create a public Gradio link (handy on Colab/Kaggle) |
+
+The same directory can be set via the `NMT_MODEL_DIR` environment variable.
 
 ---
 
