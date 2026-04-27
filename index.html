@@ -795,12 +795,12 @@ opus = load_dataset('Helsinki-NLP/opus-100', 'ar-en',
    fix:'No fixes here.',
    code:`def preprocess_en(text):
     text = text.lower().strip()
-    text = re.sub(r'([.!?,;:])', r' \1 ', text)
+    text = re.sub(r'([.!?,;:])', r' \\1 ', text)
     return re.sub(r'\\s+', ' ', text).strip()
 
 def preprocess_ar(text):
     text = unicodedata.normalize('NFC', text.strip())
-    text = re.sub(r'([?!.،,؛])', r' \1 ', text)
+    text = re.sub(r'([?!.،,؛])', r' \\1 ', text)
     return re.sub(r'\\s+', ' ', text).strip()
 
 # length filter: 1 ≤ word_count ≤ MAX_LEN
@@ -1091,11 +1091,24 @@ function buildHParams(){
 }
 
 // ─── NAV ────────────────────────────────────────────────────────────────────
-function goToSection(id){
-  document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});
+function getNavTarget(item){
+  if(item.dataset.target) return item.dataset.target;
+  const clickExpr = item.getAttribute('onclick') || '';
+  const m = clickExpr.match(/goToSection\('([^']+)'\)/);
+  return m ? m[1] : null;
+}
+
+function setActiveNav(id){
   document.querySelectorAll('.nav-item').forEach(n=>{
-    n.classList.toggle('active',n.getAttribute('onclick')===`goToSection('${id}')`);
+    n.classList.toggle('active', getNavTarget(n) === id);
   });
+}
+
+function goToSection(id){
+  const section = document.getElementById(id);
+  if(!section) return;
+  section.scrollIntoView({behavior:'smooth',block:'start'});
+  setActiveNav(id);
 }
 
 function filterNav(query){
@@ -1112,14 +1125,21 @@ const observer = new IntersectionObserver((entries)=>{
   entries.forEach(e=>{
     if(e.isIntersecting){
       const id = e.target.id;
-      document.querySelectorAll('.nav-item').forEach(n=>{
-        n.classList.toggle('active',n.getAttribute('onclick')===`goToSection('${id}')`);
-      });
+      setActiveNav(id);
     }
   });
 },{threshold:0.2});
 
 document.addEventListener('DOMContentLoaded',()=>{
+  // Bind reliable click handlers for all sidebar items.
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    const target = getNavTarget(item);
+    if(!target) return;
+    item.dataset.target = target;
+    item.removeAttribute('onclick');
+    item.addEventListener('click', ()=>goToSection(target));
+  });
+
   buildCells();
   buildGlossary();
   buildHParams();
