@@ -1,0 +1,27 @@
+---- CELL 9 ----
+  Train      :  1,000,000 pairs 
+  Validation :      2,000 pairs
+  Test       :      2,000 pairs
+
+📝 Sample pairs:
+  EN: Do they know you weren't there?
+  AR: هل يعرفون أنك لم تكوني هناك؟
+
+  EN: Just concentrate. Try again. I can't do this.
+  AR: -ركّزي فحسب، وأعيدي المحاولة .
+
+  EN: Guch!
+  AR: (جوش)
+
+
+---- CELL 30 ----
+EN : the united nations called for peace
+AR : الأمم المتحدة دعت إلى السلام
+
+---- CELL 30 ----
+EN : the meeting was postponed until next week
+AR : افتتحت الجلسة حتى الأسبوع المقبل .
+
+---- CELL 30 ----
+EN : students should study hard to succeed
+AR : علماء الطلاب أن يدرسوا صعب تحقيقه

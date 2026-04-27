@@ -244,7 +244,7 @@ tr:hover td{background:var(--bg3)}
     <span class="chip ok">Kaggle T4 · 56.4 M params</span>
   </div>
   <h1>Neural Machine Translation<br><span style="color:var(--purple)">English → Arabic</span></h1>
-  <p style="font-size:1rem;margin-top:.5rem">A deep-dive into <code>nmt-transformerv2.ipynb</code> — every architectural choice, every cell, every hyperparameter, the seven OOM fixes that made it fit on a T4, and the actual training results: <strong>val acc 46.2%</strong>, <strong>greedy BLEU-4 12.68</strong>, <strong>beam-5 BLEU-4 12.70</strong>, early-stopped at epoch 21.</p>
+  <p style="font-size:1rem;margin-top:.5rem">A deep-dive into <code>nmt-transformerv2 ).ipynb</code> — every architectural choice, every cell, every hyperparameter, the seven OOM fixes that made it fit on a T4, and the actual training results: <strong>val acc 46.2%</strong>, <strong>greedy BLEU-4 12.68</strong>, <strong>beam-5 BLEU-4 12.57</strong>, early-stopped at epoch 21.</p>
   <div class="hero-tags">
     <span class="hero-tag">Transformer Encoder-Decoder</span>
     <span class="hero-tag">OPUS-100 · 300 K pairs</span>
@@ -269,7 +269,7 @@ tr:hover td{background:var(--bg3)}
 <tr><td>3</td><td><strong>Encoder × 6</strong></td><td>IDs → 512-dim vectors</td><td>8</td><td>Self-attention + FFN, pre-norm. Produces K, V memory</td></tr>
 <tr><td>4</td><td><strong>Decoder × 6</strong></td><td>Arabic so far + memory → next logits</td><td>8</td><td>Masked self-attn + cross-attn + FFN. Auto-regressive</td></tr>
 <tr><td>5</td><td><strong>BPE detokenise</strong></td><td>Integer IDs → Arabic string</td><td>6</td><td>16K AR vocab. sp_ar.decode([4821, 33]) → "الاجتماع"</td></tr>
-<tr><td>6</td><td><strong>Arabic output</strong></td><td>Final translated text</td><td>13/14</td><td>Greedy (fastest) or Beam-5 (best quality)</td></tr>
+<tr><td>6</td><td><strong>Arabic output</strong></td><td>Final translated text</td><td>13/14</td><td>Greedy (fastest) or Beam-5 (alternative decode)</td></tr>
 </tbody>
 </table>
 </div>
@@ -344,8 +344,8 @@ tr:hover td{background:var(--bg3)}
 <tbody>
 <tr><td><span class="chip fix">FIX 1</span></td><td><code>PYTORCH_ALLOC_CONF=expandable_segments:True</code> — eliminates allocator fragmentation</td><td>0</td><td class="td-ok">Clears 3.17 GB stuck fragmentation</td></tr>
 <tr><td><span class="chip fix">FIX 2</span></td><td><code>allow_tf32=True</code> — free 2× throughput on Ampere GPUs</td><td>2</td><td class="td-ok">Speed only, no memory</td></tr>
-<tr><td><span class="chip fix">FIX 3a</span></td><td><code>BATCH_SIZE</code> 128 → 64 — halves all (B,T,V) tensors</td><td>3</td><td class="td-ok">~490 MB saved</td></tr>
-<tr><td><span class="chip fix">FIX 3b</span></td><td><code>MAX_LEN</code> 60 → 50 — attention is O(T²), saves 31%</td><td>3</td><td class="td-ok">~130 MB saved</td></tr>
+<tr><td><span class="chip fix">FIX 3a</span></td><td><code>BATCH_SIZE</code> 128 → 64 → 32 with <code>GRAD_ACCUM</code> 4 → 8 → 16 (effective batch stays 512)</td><td>3</td><td class="td-ok">Large per-step memory cut</td></tr>
+<tr><td><span class="chip fix">FIX 3b</span></td><td><code>MAX_LEN</code> tuning explored; final run keeps 60 after reducing batch size</td><td>3</td><td class="td-ok">Balances context vs memory</td></tr>
 <tr><td><span class="chip fix">FIX 4</span></td><td>Replace custom <code>LabelSmoothingLoss</code> with <code>nn.CrossEntropyLoss(label_smoothing=0.1)</code></td><td>10</td><td class="td-ok">~740 MB saved (primary fix)</td></tr>
 <tr><td><span class="chip fix">FIX 5</span></td><td><code>return_attn=False</code> during training + <code>empty_cache()</code> per epoch</td><td>11</td><td class="td-ok">~200 MB saved</td></tr>
 <tr><td><span class="chip fix">FIX 6</span></td><td>Save/restore <code>scheduler.step_n</code> in checkpoint — correct LR on resume</td><td>10</td><td>Correctness fix</td></tr>
@@ -436,7 +436,7 @@ criterion = nn.CrossEntropyLoss(
 </div>
 
 <h3>Greedy vs Beam search BLEU</h3>
-<p>Your notebook computes both. Greedy decoding always picks the single highest-probability token at each step. Beam search (width=5) maintains 5 partial hypotheses and picks the globally best sequence — it's slower but consistently gives +2–4 BLEU points over greedy.</p>
+<p>Your notebook computes both. Greedy decoding always picks the single highest-probability token at each step. Beam search (width=5) maintains 5 partial hypotheses and often helps on harder sentences, but in this run it scored slightly lower (12.57 vs 12.68) on the sampled 500-sentence subset.</p>
 <pre><code><span class="co"># Greedy: fast, slightly lower BLEU</span>
 g_ids, attn_map = model.<span class="fn">translate_greedy</span>(src_tensor)
 
@@ -517,8 +517,8 @@ b_ids = model.<span class="fn">translate_beam</span>(src_tensor, beam_width=<spa
 <p>Named after Noam Shazeer (Google Brain). Increases LR linearly for <code>warmup_steps</code> steps, then decays proportional to the inverse square root of step number.</p>
 <div class="formula">
   lr(step) = d_model^(-0.5) × min(step^(-0.5), step × warmup^(-1.5))<br><br>
-  With D=256, warmup=4000:<br>
-  Peak LR at step 4000 = 256^(-0.5) × 4000^(-0.5) = 0.0625 × 0.0158 ≈ 0.00099<br><br>
+  With D=512, warmup=8000:<br>
+  Peak LR at step 8000 = 512^(-0.5) × 8000^(-0.5) ≈ 4.94e-4 (matches the run's peak ~4.9e-4)<br><br>
   Why warmup?  At step 1, gradients are random. A large LR would destroy the<br>
   embedding initialisation. Warmup starts tiny, letting the model find a stable<br>
   gradient direction before the LR climbs.
@@ -541,7 +541,7 @@ b_ids = model.<span class="fn">translate_beam</span>(src_tensor, beam_width=<spa
 
 <!-- ─── TRAINING RESULTS ───────────────────────────────────────────── -->
 <h2 class="section" id="results">Training results</h2>
-<p>Numbers reproduced verbatim from the saved cell outputs of <code>nmt-transformerv2 (1).ipynb</code>. The configuration used was D=512, 6 encoder + 6 decoder layers, 8 heads, D_FF=2048, dropout=0.1, batch 32 × accum 16 = effective batch 512, warmup 8 000 steps, 300 K training pairs, fp16 on a Kaggle Tesla T4 (15.6 GB).</p>
+<p>Numbers reproduced verbatim from the saved cell outputs of <code>nmt-transformerv2 ).ipynb</code>. The configuration used was D=512, 6 encoder + 6 decoder layers, 8 heads, D_FF=2048, dropout=0.1, batch 32 × accum 16 = effective batch 512, warmup 8 000 steps, 300 K training pairs, fp16 on a Kaggle Tesla T4 (15.6 GB).</p>
 
 <div class="card-grid">
   <div class="metric-card">
@@ -575,7 +575,7 @@ b_ids = model.<span class="fn">translate_beam</span>(src_tensor, beam_width=<spa
     <div class="metric-sub">all 1 934 test pairs · sacrebleu</div>
   </div>
   <div class="metric-card">
-    <div class="metric-val" style="color:var(--purple)">12.70</div>
+    <div class="metric-val" style="color:var(--purple)">12.57</div>
     <div class="metric-label">Beam-5 BLEU-4</div>
     <div class="metric-sub">500-sample · α = 0.6</div>
   </div>
@@ -588,7 +588,7 @@ b_ids = model.<span class="fn">translate_beam</span>(src_tensor, beam_width=<spa
 
 <div class="alert success">
   <div class="alert-title">📈 Where the score lands on the BLEU scale</div>
-  Beam-5 BLEU-4 of 12.70 falls in the <strong>"Fair"</strong> band (10–18). The model produces grammatically correct fragments and gets the gist of short sentences, but mis-handles longer ones and rare morphology. The Arabic side of OPUS-100 is also noisy — sacrebleu warned about tokenized periods on 100 lines of the test set.
+  Beam-5 BLEU-4 of 12.57 falls in the <strong>"Fair"</strong> band (10–18). The model produces grammatically correct fragments and gets the gist of short sentences, but mis-handles longer ones and rare morphology. The Arabic side of OPUS-100 is also noisy — sacrebleu warned about tokenized periods on 100 lines of the test set.
 </div>
 
 <!-- ─── CURVES & HISTORY ─────────────────────────────────────────── -->
@@ -650,8 +650,8 @@ AR  يجب أن يرسرس الطلاب بقوة إلى النجاح</code></pre
 <table>
 <thead><tr><th>File</th><th>Size</th><th>Purpose</th></tr></thead>
 <tbody>
-<tr><td><code>best_nmt.pt</code></td><td>216.7 MB</td><td>EarlyStopping checkpoint — model + optimizer + scheduler step (resume-safe)</td></tr>
-<tr><td><code>final_nmt.pt</code></td><td>79.1 MB</td><td>Inference checkpoint — model_state + config + history + BLEU scores</td></tr>
+<tr><td><code>best_nmt.pt</code></td><td>697.4 MB</td><td>EarlyStopping checkpoint — model + optimizer + scheduler step (resume-safe)</td></tr>
+<tr><td><code>final_nmt.pt</code></td><td>246.1 MB</td><td>Inference checkpoint — model_state + config + history + BLEU scores</td></tr>
 <tr><td><code>spm_en.model</code> / <code>.vocab</code></td><td>0.4 + 0.1 MB</td><td>SentencePiece BPE for English (8 K pieces)</td></tr>
 <tr><td><code>spm_ar.model</code> / <code>.vocab</code></td><td>0.6 + 0.3 MB</td><td>SentencePiece BPE for Arabic (16 K pieces)</td></tr>
 <tr><td><code>training_curves.png</code></td><td>0.2 MB</td><td>Loss / PPL / Acc% / LR plots from Cell 12</td></tr>
@@ -930,8 +930,8 @@ print(f'Greedy BLEU-4 : {bleu_g.score:.2f}')   # → 12.68
 hyps_beam = [decode(model.translate_beam(
     encode(en), beam_width=5)) for en in sample]
 bleu_b = scb.corpus_bleu(hyps_beam, [refs_sample])
-print(f'Beam-5 BLEU-4 : {bleu_b.score:.2f}')   # → 12.70`,
-   watch:'Beam-5 is barely above greedy here (12.70 vs 12.68) because the model has not converged sharply enough for beam search to find globally better paths — both decoders are settling on similar prefixes. With more training the beam gap typically widens to +1.5 to +3 BLEU. sacrebleu also warned about tokenized periods on 100 lines — the OPUS-100 test reference has its own punctuation idiosyncrasies that are worth aware of when comparing to published scores.'},
+print(f'Beam-5 BLEU-4 : {bleu_b.score:.2f}')   # → 12.57`,
+   watch:'In this run beam-5 is slightly below greedy (12.57 vs 12.68) on the sampled subset. This can happen when the model is still under-converged and beam amplifies high-probability but generic continuations. With more data or later checkpoints, beam often regains a lead. sacrebleu also warned about tokenized periods on 100 lines — the OPUS-100 test reference has punctuation idiosyncrasies worth keeping in mind.'},
 
   {id:14,name:'attention-viz',group:'EVAL',color:'#4ecdc4',
    title:'Cell 14 — Attention visualisation',
@@ -969,15 +969,15 @@ const GLOSSARY = [
   {term:'CE Loss',def:'Cross-Entropy Loss. Negative log-probability assigned to the correct token. Training objective.',formula:'CE = -log P(correct_token | context)'},
   {term:'Label Smoothing',def:'Distributes ε=0.1 probability mass to non-correct tokens. Prevents overconfidence, improves generalisation.',formula:'target[i] = ε/(V-1)  if i≠gold, else 1-ε'},
   {term:'BPE',def:'Byte-Pair Encoding. Iteratively merges most frequent adjacent character pairs. Handles morphology and OOV words.',formula:'8K EN pieces · 16K AR pieces'},
-  {term:'D_MODEL',def:'Embedding dimension. The width of the internal representation vector. Every token is represented as a D_MODEL-dim vector.',formula:'D=256 (current) · D=512 (recommended)'},
-  {term:'N_HEADS',def:'Number of attention heads in Multi-Head Attention. Each head learns different relationships.',formula:'d_k = D_MODEL / N_HEADS = 32'},
-  {term:'D_FF',def:'Feed-forward inner dimension. Each position is projected to D_FF then back. Should be 4×D_MODEL.',formula:'256→1024→256 or 512→2048→512'},
+  {term:'D_MODEL',def:'Embedding dimension. The width of the internal representation vector. Every token is represented as a D_MODEL-dim vector.',formula:'D=512 (current run)'},
+  {term:'N_HEADS',def:'Number of attention heads in Multi-Head Attention. Each head learns different relationships.',formula:'d_k = D_MODEL / N_HEADS = 512/8 = 64'},
+  {term:'D_FF',def:'Feed-forward inner dimension. Each position is projected to D_FF then back. Should be 4×D_MODEL.',formula:'512→2048→512'},
   {term:'N_LAYERS',def:'Number of encoder + decoder layers. Each layer is one self-attention + one FFN (encoder) or two attentions + FFN (decoder).',formula:'6 enc + 6 dec = 12 total layers'},
   {term:'DROPOUT',def:'Fraction of activations randomly set to zero during training. Regularisation — prevents overfitting.',formula:'0.1–0.3 · Higher = more regularisation'},
-  {term:'BATCH_SIZE',def:'Number of sentence pairs processed per gradient step. Larger = more stable gradients but more memory.',formula:'64 (OOM-safe) · 32 (D=512 config)'},
+  {term:'BATCH_SIZE',def:'Number of sentence pairs processed per gradient step. Larger = more stable gradients but more memory.',formula:'32 with GRAD_ACCUM=16 (effective batch 512)'},
   {term:'GRAD_ACCUM',def:'Gradient accumulation steps. Accumulates gradients over N mini-batches before updating weights.',formula:'Effective batch = BATCH_SIZE × GRAD_ACCUM'},
-  {term:'WARMUP',def:'Number of Noam scheduler steps with linearly increasing LR. Prevents exploding gradients at start.',formula:'4000 steps · ~6-8 epochs at B=64'},
-  {term:'MAX_LEN',def:'Maximum sequence length. Pairs longer than this are discarded. Attention is O(T²) so shorter = less memory.',formula:'50 (current) · 60 (original)'},
+  {term:'WARMUP',def:'Number of Noam scheduler steps with linearly increasing LR. Prevents exploding gradients at start.',formula:'8000 steps in this run'},
+  {term:'MAX_LEN',def:'Maximum sequence length. Pairs longer than this are discarded. Attention is O(T²) so shorter = less memory.',formula:'60 in this run'},
   {term:'CLIP',def:'Gradient clipping threshold. Clips gradients whose L2 norm exceeds CLIP=1.0. Prevents gradient explosions.',formula:'grad = grad × (1.0 / max(1.0, norm))'},
   {term:'SOS / EOS',def:'Start-of-Sequence and End-of-Sequence tokens. Decoder starts with SOS, stops generating when it predicts EOS.',formula:'SOS_IDX=1 · EOS_IDX=2 · PAD_IDX=0'},
   {term:'PAD_IDX',def:'Padding token index (0). Short sequences are padded to match the longest sequence in a batch.',formula:'Masked out in loss with ignore_index=PAD_IDX'},
@@ -1007,7 +1007,7 @@ const GLOSSARY = [
 ];
 
 // ─── HYPERPARAMETER TABLE DATA ────────────────────────────────────────────
-// Values reflect the v2 notebook (nmt-transformerv2 (1).ipynb) actually used for the run.
+// Values reflect the v2 notebook (nmt-transformerv2 ).ipynb) actually used for the run.
 const HPARAMS = [
   {param:'D_MODEL',val:'512',effect:'Width of all internal representations. Bottleneck of model capacity.',tune:'512 is the paper standard for EN→AR. Going to 768 helps slightly but doubles training time on a T4.'},
   {param:'N_HEADS',val:'8',effect:'Number of parallel attention heads. Each captures different token relationships.',tune:'Must divide D_MODEL exactly. With D=512 → d_k=64 per head.'},
