@@ -175,59 +175,59 @@ tr:hover td{background:var(--bg3)}
 
   <div class="nav-section">
     <div class="nav-section-label">Overview</div>
-    <div class="nav-item active" onclick="scrollTo('intro')" data-label="intro">
+    <div class="nav-item active" onclick="goToSection('intro')" data-label="intro">
       <span class="nav-dot" style="background:#8b7ff5"></span>Project Overview
     </div>
-    <div class="nav-item" onclick="scrollTo('pipeline')" data-label="pipeline">
+    <div class="nav-item" onclick="goToSection('pipeline')" data-label="pipeline">
       <span class="nav-dot" style="background:#4ecdc4"></span>Translation Pipeline
     </div>
-    <div class="nav-item" onclick="scrollTo('arch')" data-label="arch">
+    <div class="nav-item" onclick="goToSection('arch')" data-label="arch">
       <span class="nav-dot" style="background:#ffa94d"></span>Architecture
     </div>
   </div>
 
   <div class="nav-section">
     <div class="nav-section-label">Notebook Cells</div>
-    <div class="nav-item" onclick="scrollTo('cells')" data-label="cells">
+    <div class="nav-item" onclick="goToSection('cells')" data-label="cells">
       <span class="nav-dot" style="background:#69db7c"></span>All 16 Cells
     </div>
-    <div class="nav-item" onclick="scrollTo('fixes')" data-label="fixes">
+    <div class="nav-item" onclick="goToSection('fixes')" data-label="fixes">
       <span class="nav-dot" style="background:#ff6b6b"></span>OOM Fixes (7 total)
     </div>
   </div>
 
   <div class="nav-section">
     <div class="nav-section-label">Metrics & Terms</div>
-    <div class="nav-item" onclick="scrollTo('bleu')" data-label="bleu">
+    <div class="nav-item" onclick="goToSection('bleu')" data-label="bleu">
       <span class="nav-dot" style="background:#74c0fc"></span>BLEU Score
     </div>
-    <div class="nav-item" onclick="scrollTo('ppl')" data-label="ppl">
+    <div class="nav-item" onclick="goToSection('ppl')" data-label="ppl">
       <span class="nav-dot" style="background:#f48fb1"></span>Perplexity (PPL)
     </div>
-    <div class="nav-item" onclick="scrollTo('loss')" data-label="loss">
+    <div class="nav-item" onclick="goToSection('loss')" data-label="loss">
       <span class="nav-dot" style="background:#ffa94d"></span>Loss Functions
     </div>
-    <div class="nav-item" onclick="scrollTo('glossary')" data-label="glossary">
+    <div class="nav-item" onclick="goToSection('glossary')" data-label="glossary">
       <span class="nav-dot" style="background:#8b7ff5"></span>Full Glossary (40+)
     </div>
   </div>
 
   <div class="nav-section">
     <div class="nav-section-label">Hyperparameters</div>
-    <div class="nav-item" onclick="scrollTo('hparams')" data-label="hparams">
+    <div class="nav-item" onclick="goToSection('hparams')" data-label="hparams">
       <span class="nav-dot" style="background:#4ecdc4"></span>Every Parameter Explained
     </div>
-    <div class="nav-item" onclick="scrollTo('memory')" data-label="memory">
+    <div class="nav-item" onclick="goToSection('memory')" data-label="memory">
       <span class="nav-dot" style="background:#ff6b6b"></span>GPU Memory Budget
     </div>
   </div>
 
   <div class="nav-section">
     <div class="nav-section-label">Results</div>
-    <div class="nav-item" onclick="scrollTo('results')" data-label="results">
+    <div class="nav-item" onclick="goToSection('results')" data-label="results">
       <span class="nav-dot" style="background:#69db7c"></span>Training Results
     </div>
-    <div class="nav-item" onclick="scrollTo('curves')" data-label="curves">
+    <div class="nav-item" onclick="goToSection('curves')" data-label="curves">
       <span class="nav-dot" style="background:#74c0fc"></span>Curves &amp; History
     </div>
   </div>
@@ -1091,10 +1091,10 @@ function buildHParams(){
 }
 
 // ─── NAV ────────────────────────────────────────────────────────────────────
-function scrollTo(id){
+function goToSection(id){
   document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'});
   document.querySelectorAll('.nav-item').forEach(n=>{
-    n.classList.toggle('active',n.getAttribute('onclick')===`scrollTo('${id}')`);
+    n.classList.toggle('active',n.getAttribute('onclick')===`goToSection('${id}')`);
   });
 }
 
@@ -1113,7 +1113,7 @@ const observer = new IntersectionObserver((entries)=>{
     if(e.isIntersecting){
       const id = e.target.id;
       document.querySelectorAll('.nav-item').forEach(n=>{
-        n.classList.toggle('active',n.getAttribute('onclick')===`scrollTo('${id}')`);
+        n.classList.toggle('active',n.getAttribute('onclick')===`goToSection('${id}')`);
       });
     }
   });
